@@ -1,7 +1,7 @@
 <link rel="stylesheet" href=
 "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.css">
 
-<div class="navbar bg-base-100 shadow relative xl:px-5">
+<div class="navbar min-h-[12%] absolute top-0 xl:px-5">
     <div class="flex-1">
         <a><img src="{{ asset('images/logo.png') }}" alt="Logo" class="w-full max-w-20"></a>
     </div>

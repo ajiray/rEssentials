@@ -24,11 +24,30 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        try {
+            $request->authenticate();
 
-        $request->session()->regenerate();
+            $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+            $user = Auth::user();
+            
+            // Check if the user is banned
+            if ($user->usertype === 'banned') {
+                Auth::logout(); // Log out the user if they are banned
+                throw new \Exception('This email is banned. Please contact support for assistance.');
+            }
+
+            // Redirect based on user type
+            if ($user->usertype == 'user') {
+                return redirect()->intended(route('dashboard', [], false));
+            } elseif ($user->usertype == 'admin') {
+                return redirect()->intended(route('admindashboard', [], false));
+            } else {
+                return redirect()->back();
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['email' => $e->getMessage()]);
+        }
     }
 
     /**

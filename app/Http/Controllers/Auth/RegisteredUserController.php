@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Session;
 
 class RegisteredUserController extends Controller
 {
@@ -40,7 +41,9 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
         
-
+        // Set the default profile picture path
+        $defaultProfilePicture = 'images/default.png';
+        
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -50,9 +53,13 @@ class RegisteredUserController extends Controller
             'postal_code' => $request->postal_code,
             'province' => $request->province,
             'password' => Hash::make($request->password),
+            'profile_picture' => $defaultProfilePicture,
         ]);
+        
 
         event(new Registered($user));
+
+        Session::flash('success', 'User registration successful. To complete the registration process, please verify your account by clicking the verification link sent to your email.');
 
     // Redirect the user to the login page
     return redirect()->route('login');
