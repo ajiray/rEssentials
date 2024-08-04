@@ -19,6 +19,16 @@
     </style>
 
     <div class="container mx-auto px-4">
+        <form method="GET" action="{{ route('product') }}" class="mb-3">
+            <div class="relative flex justify-center items-center mt-10 space-x-2">
+                <input type="text" name="search" placeholder="Search for products..." value="{{ request('search') }}"
+                    class="w-[70%] py-2 px-4 rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out duration-300">
+                <button type="submit"
+                    class="py-2 px-4 rounded-md shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-300">
+                    Search
+                </button>
+            </div>
+        </form>
 
         @if (session('success'))
             <div id="successMessage"
@@ -31,6 +41,7 @@
             <button class="btn btn-primary text-slate-900 border-none hover:bg-emerald-700 bg-green"
                 onclick="my_modal_3.showModal()">Add Item</button>
         </div>
+
 
         <dialog id="my_modal_3" class="modal">
             <div class="modal-box">

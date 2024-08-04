@@ -11,9 +11,13 @@
     }
 </style>
 @if ($products->isEmpty())
-    <div class="w-full h-screen bg-velvet flex justify-center items-center flex-col">
-        <h1 class="text-gold font-bold tracking-widest text-5xl text-center">Thank you for supporting R Essentials!</h1>
-        <p class="mt-4 text-2xl text-gold">Our inventory is currently sold out. We appreciate your continued support.</p>
+    <div class="w-full h-screen bg-gold flex justify-center items-center flex-col">
+        <h1 class="text-3xl md:text-4xl text-velvet font-bold tracking-widest xl:text-5xl text-center">Thank
+            you for supporting R Essentials!
+        </h1>
+        <p class="text-lg md:text-2xl text-center mt-4 xl:text-2xl text-velvet">Our inventory is currently sold out. We
+            appreciate your continued support.
+        </p>
     </div>
 @endif
 @unless ($products->isEmpty())
@@ -42,7 +46,7 @@
     </div>
 
 
-    <div class="grid grid-cols-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 w-[95%] mx-auto pb-20 h-auto"
+    <div class="grid grid-cols-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 w-[95%] mx-auto pb-20 h-auto px-5 md:px-10"
         id="product-list">
 
 
@@ -566,14 +570,14 @@
                     </h2>
                     <div class="carousel w-full no-touch-scroll" id="carousel_${product.id}">
                         ${product.variants.map((variant, variantIndex) => variant.images.map((image, imageIndex) => `
-                                                                                                                                                                                                                                                                                    <div id="slide${product.id}-${variant.id}-${imageIndex + 1}" class="carousel-item relative w-full h-full flex justify-center items-center ${imageIndex === 0 ? 'active' : ''}">
-                                                                                                                                                                                                                                                                                        <img src="/storage/${image.path}" alt="${product.name}" class="w-[150px] h-[200px] md:w-[200px] md:h-[250px] lg:w-[300px] lg:h-[400px] object-contain py-3">
-                                                                                                                                                                                                                                                                                        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                                                                                                                                                                                                                                                                                            ${imageIndex > 0 ? `<a href="#slide${product.id}-${variant.id}-${imageIndex}" class="btn btn-circle bg-gray-800 text-white">❮</a>` : `<a class="btn btn-circle bg-gray-300 text-gray-600 cursor-not-allowed">❮</a>`}
-                                                                                                                                                                                                                                                                                            ${imageIndex < variant.images.length - 1 ? `<a href="#slide${product.id}-${variant.id}-${imageIndex + 2}" class="btn btn-circle bg-gray-800 text-white">❯</a>` : `<a class="btn btn-circle bg-gray-300 text-gray-600 cursor-not-allowed">❯</a>`}
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                `).join('')).join('')}
+                                                                                                                                                                                                                                                                                                                                                    <div id="slide${product.id}-${variant.id}-${imageIndex + 1}" class="carousel-item relative w-full h-full flex justify-center items-center ${imageIndex === 0 ? 'active' : ''}">
+                                                                                                                                                                                                                                                                                                                                                        <img src="/storage/${image.path}" alt="${product.name}" class="w-[150px] h-[200px] md:w-[200px] md:h-[250px] lg:w-[300px] lg:h-[400px] object-contain py-3">
+                                                                                                                                                                                                                                                                                                                                                        <div class="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+                                                                                                                                                                                                                                                                                                                                                            ${imageIndex > 0 ? `<a href="#slide${product.id}-${variant.id}-${imageIndex}" class="btn btn-circle bg-gray-800 text-white">❮</a>` : `<a class="btn btn-circle bg-gray-300 text-gray-600 cursor-not-allowed">❮</a>`}
+                                                                                                                                                                                                                                                                                                                                                            ${imageIndex < variant.images.length - 1 ? `<a href="#slide${product.id}-${variant.id}-${imageIndex + 2}" class="btn btn-circle bg-gray-800 text-white">❯</a>` : `<a class="btn btn-circle bg-gray-300 text-gray-600 cursor-not-allowed">❯</a>`}
+                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                `).join('')).join('')}
                     </div>
                 </div>
             </div>

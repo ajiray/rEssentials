@@ -18,7 +18,7 @@
         <x-hero />
     </section>
 
-    <section class="second-section w-full px-5 pb-20 md:px-20 h-auto min-h-full">
+    <section class="second-section w-full h-auto min-h-full">
         <div>
             <x-shop :products="$products" />
         </div>

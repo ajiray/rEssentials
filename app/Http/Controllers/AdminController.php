@@ -41,12 +41,34 @@ class AdminController extends Controller
     
 
     // Method for managing products
-    public function manageProducts()
-{
-    $products = Product::orderBy('id', 'desc')->get();
-    $categories = Product::distinct()->pluck('category'); // Get distinct categories
-    return view('admin.products', ['products' => $products, 'categories' => $categories]);
-}
+    public function manageProducts(Request $request)
+    {
+        $search = $request->query('search');
+    
+        $productsQuery = Product::query()
+            ->orderBy('id', 'desc');
+    
+        if ($search) {
+            // Split the search string into individual words
+            $searchTerms = explode(' ', $search);
+    
+            $productsQuery->where(function ($query) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $query->where(function ($query) use ($term) {
+                        $query->where('name', 'like', '%' . $term . '%')
+                        ->orWhere('description', 'like', '%' . $term . '%')
+                              ->orWhere('brand', 'like', '%' . $term . '%');
+                    });
+                }
+            });
+        }
+    
+        $products = $productsQuery->get();
+        $categories = Product::distinct()->pluck('category'); // Get distinct categories
+    
+        return view('admin.products', ['products' => $products, 'categories' => $categories]);
+    }
+    
 
 
     // Method for managing customers
@@ -90,6 +112,7 @@ class AdminController extends Controller
             foreach ($searchTerms as $term) {
                 $query->where(function ($query) use ($term) {
                     $query->where('name', 'like', '%' . $term . '%')
+                    ->orWhere('description', 'like', '%' . $term . '%')
                           ->orWhere('brand', 'like', '%' . $term . '%');
                 });
             }

@@ -108,12 +108,12 @@
   <div class="w-full flex justify-between items-center mt-2 lg:mt-4 xl:mt-6">
     <input type="hidden" name="cart_id[]" value="${cartItem.id}">
     <div class="flex items-center space-x-2">
-      <label for="quantity_${product.id}" class="block text-gray-600">Quantity:</label>
-      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="decrementQuantity(${product.id}, ${variant.quantity})">
+      <label for="quantity_${variant.id}" class="block text-gray-600">Quantity:</label>
+      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="decrementQuantity(${variant.id}, ${variant.quantity})">
         -
       </button>
-      <input type="number" id="quantity_${product.id}" name="quantity[]" value="1" class="w-16 border rounded-md text-center" min="1" max="${variant.quantity}" oninput="updateMaxQuantity(this, ${variant.quantity})" required>
-      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="incrementQuantity(${product.id}, ${variant.quantity})">
+      <input type="number" id="quantity_${variant.id}" name="quantity[]" value="1" class="w-16 border rounded-md text-center" min="1" max="${variant.quantity}" oninput="updateMaxQuantity(this, ${variant.quantity})" required>
+      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="incrementQuantity(${variant.id}, ${variant.quantity})">
         +
       </button>
     </div>
@@ -233,7 +233,7 @@
         <x-hero />
     </section>
 
-    <section class="second-section w-full h-auto px-5 md:px-10 min-h-full">
+    <section class="second-section w-full h-auto min-h-full">
         <div>
             <x-shop :products="$products" />
         </div>

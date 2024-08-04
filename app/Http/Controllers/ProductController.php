@@ -22,13 +22,38 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'category' => 'required|string|max:255', // Add validation for the category
         ]);
-        
+    
+        // Extract the first letters of the name and brand
+        $nameInitial = strtoupper(substr($validatedData['name'], 0, 1));
+        $brandInitial = strtoupper(substr($validatedData['brand'], 0, 1));
+    
+        // Find the highest existing code number for this name and brand
+        $existingProducts = Product::where('name', $validatedData['name'])
+            ->where('brand', $validatedData['brand'])
+            ->get();
+    
+        $maxCodeNumber = 0;
+        foreach ($existingProducts as $product) {
+            $description = $product->description;
+            if (preg_match('/' . $nameInitial . $brandInitial . '(\d+)/', $description, $matches)) {
+                $maxCodeNumber = max($maxCodeNumber, (int)$matches[1]);
+            }
+        }
+    
+        // Generate the new code
+        $newCodeNumber = $maxCodeNumber + 1;
+        $newCode = $nameInitial . $brandInitial . $newCodeNumber;
+    
+        // Append the generated code to the description
+        $validatedData['description'] = isset($validatedData['description']) ? $validatedData['description'] . ' ' . $newCode : $newCode;
+    
         // Store the validated product data in the database
         Product::create($validatedData);
     
         // Redirect the user back to the product index page
         return redirect()->back()->with('success', 'Product added successfully.');
     }
+    
     
 
     /**
@@ -89,10 +114,10 @@ class ProductController extends Controller
     // Save the changes to the item
     $item->save();
 
-    // Check if there are changes in the product details (name, brand, description)
-    if ($request->filled(['name', 'brand', 'description'])) {
-        // Find the corresponding product
+   
+ 
         $product = $item->product;
+        
 
         // Update the product details
         $product->name = $request->input('name');
@@ -101,7 +126,7 @@ class ProductController extends Controller
 
         // Save the changes to the product
         $product->save();
-    }
+    
 
     // Redirect back to the profile page or wherever you need
     return redirect()->route('product')->with('success', 'Item updated successfully');

@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\User;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\Transaction;
 use App\Models\ProductVariant;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CartController;
@@ -56,18 +58,95 @@ Route::get('/dashboard', function () {
 Route::middleware(['auth', 'admin'])->group(function () {
 //admin side
 Route::get('/admindashboard', function () {
-    // Retrieve all orders from the Order model
-    $orders = Order::all();
-    $transactions = Transaction::all();
-    $remainingStock = ProductVariant::with('images')->get();
+    // Sales Data
+    $totalRevenue = Order::sum('total_amount');
+    $totalSales = Order::count();
+    $totalItemsSold = Transaction::sum('quantity');
+    $averageOrderValue = $totalSales ? $totalRevenue / $totalSales : 0;
 
-    // Pass the $orders and $transactions variables to the view
+    $topSellingProducts = Transaction::select('variant_id', DB::raw('SUM(quantity) as total_quantity'))
+        ->groupBy('variant_id')
+        ->orderByDesc('total_quantity')
+        ->take(5)
+        ->with('variant.product')
+        ->get();
+
+    $salesByCategory = Product::select('category', DB::raw('SUM(transactions.quantity * transactions.price) as total_sales'))
+        ->join('product_variants', 'product_variants.product_id', '=', 'products.id')
+        ->join('transactions', 'transactions.variant_id', '=', 'product_variants.id')
+        ->groupBy('category')
+        ->get();
+
+    // Customer Data
+    $totalCustomers = User::where('userType', 'user')->count();
+    $newCustomers = User::where('userType', 'user')
+        ->where('created_at', '>=', now()->subMonth())
+        ->count(); // New customers in the last month
+
+    $topCustomers = User::select('users.id', 'users.name', 'users.email', DB::raw('SUM(orders.total_amount) as total_spent'))
+        ->join('orders', 'orders.customer_id', '=', 'users.id')
+        ->where('users.userType', 'user')
+        ->groupBy('users.id', 'users.name', 'users.email')
+        ->orderByDesc('total_spent')
+        ->take(5)
+        ->get();
+
+    // Purchase Frequency (average number of purchases per customer)
+    $totalOrders = Order::count();
+    $purchaseFrequency = $totalCustomers ? $totalOrders / $totalCustomers : 0;
+
+    // Customer Retention Rate
+    $repeatCustomers = User::where('userType', 'user')
+        ->whereHas('orders', function ($query) {
+            $query->groupBy('customer_id')->havingRaw('COUNT(*) > 1');
+        })
+        ->count();
+    $customerRetentionRate = $totalCustomers ? ($repeatCustomers / $totalCustomers) * 100 : 0;
+
+    // Inventory Data
+    $totalProducts = ProductVariant::count();
+    $productsInStock = ProductVariant::where('quantity', '>', 0)->count();
+    $outOfStockProducts = ProductVariant::where('quantity', '=', 0)->count();
+    $totalInventoryValue = ProductVariant::sum(DB::raw('price * quantity'));
+    
+    $stockedProducts = ProductVariant::select('product_id', 'color', 'size', DB::raw('SUM(quantity) as total_quantity'))
+    ->groupBy('product_id', 'color', 'size')
+    ->orderBy('total_quantity')
+    ->with('product')
+    ->get();
+
+
+    $productsByCategory = Product::select('category', DB::raw('COUNT(*) as total_products'))
+        ->groupBy('category')
+        ->get();
+
+    // Inventory Turnover Rate (assuming a period, e.g., last 12 months)
+    $costOfGoodsSold = Transaction::sum(DB::raw('quantity * price')); // Total cost of goods sold
+    $averageInventory = ProductVariant::avg(DB::raw('price * quantity')); // Average inventory value
+    $inventoryTurnoverRate = $averageInventory ? $costOfGoodsSold / $averageInventory : 0;
+
+    // Pass the data to the view
     return view('admin.admindashboard', [
-        'orders' => $orders,
-        'transactions' => $transactions,
-        'remainingStock' => $remainingStock,
+        'totalRevenue' => $totalRevenue,
+        'totalSales' => $totalSales,
+        'totalItemsSold' => $totalItemsSold,
+        'averageOrderValue' => $averageOrderValue,
+        'topSellingProducts' => $topSellingProducts,
+        'salesByCategory' => $salesByCategory,
+        'totalCustomers' => $totalCustomers,
+        'newCustomers' => $newCustomers,
+        'topCustomers' => $topCustomers,
+        'purchaseFrequency' => $purchaseFrequency,
+        'customerRetentionRate' => $customerRetentionRate,
+        'totalProducts' => $totalProducts,
+        'productsInStock' => $productsInStock,
+        'outOfStockProducts' => $outOfStockProducts,
+        'totalInventoryValue' => $totalInventoryValue,
+        'stockedProducts' => $stockedProducts,
+        'productsByCategory' => $productsByCategory,
+        'inventoryTurnoverRate' => $inventoryTurnoverRate,
     ]);
-})->middleware(['auth'])->name('admindashboard');
+})->name('admindashboard');
 
 
 Route::get('/admin/orders', [AdminController::class, 'manageOrders'])->name('order');
