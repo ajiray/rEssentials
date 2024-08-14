@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use App\Models\LayawayPayment;
 use App\Models\ProductVariant;
 
 class OrderController extends Controller
@@ -204,16 +206,107 @@ public function viewItems($orderId)
 
 
 public function filterOrders($status)
-    {
-        if ($status == 'all') {
-            $orders = Order::with('customer')->orderBy('id', 'desc')->get();
-        } else {
-            $orders = Order::with('customer')->where('shipping_status', $status)->orderBy('id', 'desc')->get();
-        }
-
-        return response()->json($orders);
+{
+    if ($status == 'all') {
+        $orders = Order::with('customer')
+            ->where('payment_method', 'fully paid')
+            ->orderBy('id', 'desc')
+            ->get();
+    } else {
+        $orders = Order::with('customer')
+            ->where('payment_method', 'fully paid')
+            ->where('shipping_status', $status)
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
+    return response()->json($orders);
+}
+
+
     
-    
+public function layawayPayments(Order $order)
+{
+    // Calculate total payments required (excluding the initial down payment)
+    $totalPaymentsRequired = $order->layaway_duration * 2;
+    $months = $order->layaway_duration;
+
+    // Fetch all layaway payments
+    $allPayments = $order->layawayPayments()->get();
+
+    // Separate initial payment and other payments
+    $initialPayment = $allPayments->where('is_initial_payment', true)->first();
+    $payments = $allPayments->where('is_initial_payment', false);
+
+    // Calculate the number of payments made (excluding the initial down payment)
+    $paymentsMade = $payments->count();
+
+    // Calculate the remaining balance (excluding the initial down payment)
+    $remainingBalance = $order->total_amount - $order->amount_paid;
+    $nextPaymentAmount = $remainingBalance / ($totalPaymentsRequired - $paymentsMade);
+
+    // Calculate the next payment due date using the new logic
+    $today = Carbon::today();
+    $lastPaymentDate = $payments->isEmpty() ? $today : $payments->last()->payment_date;
+    $lastPaymentDate = Carbon::parse($lastPaymentDate);
+
+    // Determine the next payment date
+    if ($lastPaymentDate->day <= 15) {
+        $nextPaymentDate = $lastPaymentDate->copy()->endOfMonth(); // Set to the end of the month
+    } else {
+        $nextPaymentDate = $lastPaymentDate->copy()->addMonthNoOverflow()->day(15); // Set to 15th of next month
+    }
+
+    return response()->json([
+        'success' => true,
+        'initialPayment' => $initialPayment,
+        'payments' => $payments,
+        'paymentsMade' => $paymentsMade,
+        'totalPaymentsRequired' => $totalPaymentsRequired,
+        'months' => $months,
+        'nextPaymentDate' => $nextPaymentDate->format('F j, Y'),
+        'nextPaymentAmount' => $nextPaymentAmount,
+        'totalAmount' => $order->total_amount,
+        'remainingBalance' => $remainingBalance,
+        'amount_paid' => $order->amount_paid,
+        'allPayments' => $allPayments,
+    ]);
+}
+
+
+public function addLayawayPayment(Request $request)
+{
+    $validatedData = $request->validate([
+        'payment_receipt' => 'required|file|mimes:jpeg,png,pdf|max:5120',
+        'order_id' => 'required|exists:orders,id',
+        'payment_amount' => 'required|numeric|min:1',
+    ]);
+
+    $order = Order::find($request->input('order_id'));
+
+    if (!$order) {
+        return response()->json(['success' => false, 'message' => 'Order not found.']);
+    }
+
+    $receiptPath = $request->file('payment_receipt')->store('receipts', 'public');
+    $paymentAmount = $request->input('payment_amount');
+
+    $isInitialPayment = $order->layawayPayments()->count() === 0;
+
+    LayawayPayment::create([
+        'order_id' => $order->id,
+        'payment_date' => Carbon::now(),
+        'amount' => $paymentAmount,
+        'status' => 'Pending',
+        'receipt' => $receiptPath,
+        'is_initial_payment' => $isInitialPayment,
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'Payment submitted successfully!', 'order_id' => $order->id]);
+}
+
+
+
+
+
 }

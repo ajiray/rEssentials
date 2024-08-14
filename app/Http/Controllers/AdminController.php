@@ -6,7 +6,9 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Models\LayawayPayment;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 
@@ -14,29 +16,31 @@ class AdminController extends Controller
 {
 
     public function manageOrders()
-    {
-        $orders = Order::orderBy('id', 'desc')->get();
-        $totalOrdersCount = $orders->count();
-    
-        $newOrdersCount = $orders->where('shipping_status', 'preparing')->count();
-        $pendingOrdersCount = $orders->where('shipping_status', 'shipped')->count();
-        $deliveredOrdersCount = $orders->where('shipping_status', 'delivered')->count();
-    
-        // Calculate the impressions
-        $newOrdersImpression = $totalOrdersCount > 0 ? round(($newOrdersCount / $totalOrdersCount) * 100, 2) : 0;
-        $pendingOrdersImpression = $totalOrdersCount > 0 ? round(($pendingOrdersCount / $totalOrdersCount) * 100, 2) : 0;
-        $deliveredOrdersImpression = $totalOrdersCount > 0 ? round(($deliveredOrdersCount / $totalOrdersCount) * 100, 2) : 0;
-    
-        return view('admin.orders', [
-            'orders' => $orders,
-            'newOrdersCount' => $newOrdersCount,
-            'pendingOrdersCount' => $pendingOrdersCount,
-            'deliveredOrdersCount' => $deliveredOrdersCount,
-            'newOrdersImpression' => $newOrdersImpression,
-            'pendingOrdersImpression' => $pendingOrdersImpression,
-            'deliveredOrdersImpression' => $deliveredOrdersImpression,
-        ]);
-    }
+{
+    // Fetch orders with payment_method 'fully paid'
+    $orders = Order::where('payment_method', 'fully paid')->orderBy('id', 'desc')->get();
+    $totalOrdersCount = $orders->count();
+
+    $newOrdersCount = $orders->where('shipping_status', 'preparing')->count();
+    $pendingOrdersCount = $orders->where('shipping_status', 'shipped')->count();
+    $deliveredOrdersCount = $orders->where('shipping_status', 'delivered')->count();
+
+    // Calculate the impressions
+    $newOrdersImpression = $totalOrdersCount > 0 ? round(($newOrdersCount / $totalOrdersCount) * 100, 2) : 0;
+    $pendingOrdersImpression = $totalOrdersCount > 0 ? round(($pendingOrdersCount / $totalOrdersCount) * 100, 2) : 0;
+    $deliveredOrdersImpression = $totalOrdersCount > 0 ? round(($deliveredOrdersCount / $totalOrdersCount) * 100, 2) : 0;
+
+    return view('admin.orders', [
+        'orders' => $orders,
+        'newOrdersCount' => $newOrdersCount,
+        'pendingOrdersCount' => $pendingOrdersCount,
+        'deliveredOrdersCount' => $deliveredOrdersCount,
+        'newOrdersImpression' => $newOrdersImpression,
+        'pendingOrdersImpression' => $pendingOrdersImpression,
+        'deliveredOrdersImpression' => $deliveredOrdersImpression,
+    ]);
+}
+
     
     
 
@@ -170,5 +174,56 @@ public function unbanUser(User $user)
     return redirect()->back()->with('success', 'User has been unbanned successfully');
 }
 
+
+public function getLayawayDetails(Order $order)
+{
+    $order->load('customer', 'layawayPayments');
+    $paymentsMade = $order->layawayPayments->count();
+    $totalPayments = $order->layaway_duration * 2;
+
+    return response()->json([
+        'success' => true,
+        'order' => $order,
+        'total_payments' => $totalPayments,
+        'amount_paid' => $order->amount_paid, // Include amount_paid in the response
+    ]);
+}
+
+
+public function updatePaymentStatus(Request $request)
+{
+    $request->validate([
+        'payment_id' => 'required|exists:layaway_payments,id',
+        'status' => 'required|in:pending,Accepted,rejected',
+    ]);
+
+    $payment = LayawayPayment::find($request->payment_id);
+    $payment->status = $request->status;
+    $payment->save();
+
+    // If the payment is accepted, add the payment amount to the order's amount_paid
+    if ($request->status === 'Accepted') {
+        $order = $payment->order;
+        $order->amount_paid += $payment->amount;
+        $order->save();
+    }
+
+    return response()->json(['success' => true, 'message' => 'Payment status updated successfully!']);
+}
+
+
+public function markAsFullyPaid(Order $order)
+{
+    // Calculate total amount paid
+    $amountPaid = $order->layawayPayments->where('status', 'Accepted')->sum('amount');
     
+    // Update order to fully paid
+    $order->payment_method = 'fully paid';
+    $order->amount_paid = $amountPaid;
+    $order->save();
+
+    return response()->json(['success' => true, 'message' => 'Order marked as fully paid successfully!']);
+}
+
+
 }

@@ -35,7 +35,17 @@
             </div>
             <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                 <li><a href="{{ route('profile.edit') }}">Profile</a></li>
-                <li><a href="{{ route('checkOrders') }}">Orders</a></li>
+                <li class="relative">
+                    <a href="{{ route('checkOrders') }}" class="flex items-center">
+                        Orders
+                        <!-- Order Count Badge -->
+                        <span
+                            class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
+                            {{ auth()->user()->orders()->count() }}
+                        </span>
+                    </a>
+                </li>
+
                 <li>
                     <a href="#"
                         onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>

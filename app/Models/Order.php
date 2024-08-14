@@ -14,6 +14,7 @@ class Order extends Model
         'order_date',
         'shipping_address',
         'total_amount',
+        'payment_method', // Added
         'payment_status',
         'shipping_method',
         'tracking_number',
@@ -21,6 +22,9 @@ class Order extends Model
         'shipping_procedure',
         'receipt',
         'num_orders',
+        'layaway_deposit', // Added
+        'layaway_duration', // Added
+        'amount_paid',
     ];
 
     public function customer()
@@ -31,6 +35,11 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(Transaction::class, 'order_id');
+    }
+
+    public function layawayPayments()
+    {
+        return $this->hasMany(LayawayPayment::class);
     }
 
     

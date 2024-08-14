@@ -63,6 +63,12 @@ Route::get('/admindashboard', function () {
     $totalSales = Order::count();
     $totalItemsSold = Transaction::sum('quantity');
     $averageOrderValue = $totalSales ? $totalRevenue / $totalSales : 0;
+    
+    $layawayOrders = Order::where('payment_method', 'layaway')
+    ->with('customer')
+    ->orderBy('id', 'desc')
+    ->get();
+
 
     $topSellingProducts = Transaction::select('variant_id', DB::raw('SUM(quantity) as total_quantity'))
         ->groupBy('variant_id')
@@ -145,6 +151,7 @@ Route::get('/admindashboard', function () {
         'stockedProducts' => $stockedProducts,
         'productsByCategory' => $productsByCategory,
         'inventoryTurnoverRate' => $inventoryTurnoverRate,
+        'layawayOrders' => $layawayOrders, // Add this line
     ]);
 })->name('admindashboard');
 
@@ -221,6 +228,16 @@ Route::patch('/update-status/{orderId}', [OrderController::class, 'updateStatus'
 Route::get('/view-items/{orderId}', [OrderController::class, 'viewItems'])->name('viewItems');
 Route::get('/filter-orders/{status}', [OrderController::class, 'filterOrders'])->name('filterOrders');
 Route::get('/orders/{id}', [OrderController::class, 'show']);
+Route::get('/layaway-payments/{order}', [OrderController::class, 'layawayPayments'])->name('layaway.payments');
+Route::post('/add-layaway-payment', [OrderController::class, 'addLayawayPayment']);
+
+
+
+Route::get('/admin/layaway-details/{order}', [AdminController::class, 'getLayawayDetails']);
+Route::post('/admin/update-payment-status', [AdminController::class, 'updatePaymentStatus']);
+
+Route::post('/admin/mark-as-fully-paid/{order}', [AdminController::class, 'markAsFullyPaid']);
+
 
 
 

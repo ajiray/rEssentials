@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="w-full h-auto py-20 flex justify-center items-center">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
             <!-- Sales Report Button -->
             <div class="flex justify-center items-center flex-col p-6 rounded-lg bg-emerald-500 hover:bg-emerald-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
@@ -20,11 +20,35 @@
             </div>
 
             <!-- Inventory Report Button -->
-            <div class="flex justify-center items-center flex-col p-6 rounded-lg bg-red-500 hover:bg-red-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
+            <div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-red-500 hover:bg-red-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
                 onclick="document.getElementById('inventory_report_modal').showModal()">
                 <i class="fa-solid fa-warehouse text-4xl mb-2"></i>
                 <p class="text-lg font-semibold">Inventory Report</p>
+
+                <!-- Warning Badge for Out-of-Stock Products -->
+                @if ($outOfStockProducts > 0)
+                    <span
+                        class="absolute top-0 right-0 transform translate-x-3 -translate-y-3 flex items-center justify-center w-10 h-10 text-2xl font-bold leading-none text-white bg-red-700 rounded-full">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                    </span>
+                @endif
             </div>
+
+
+            <!-- Layaway Orders Button -->
+            <div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-amber-500 hover:bg-amber-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
+                onclick="document.getElementById('layaway_orders_modal').showModal()">
+                <i class="fa-solid fa-wallet text-4xl mb-2"></i>
+                <p class="text-lg font-semibold">Layaway Orders</p>
+
+                <!-- Badge for Layaway Orders Count -->
+                <span
+                    class="absolute top-0 right-0 transform translate-x-2 -translate-y-2 flex items-center justify-center w-8 h-8 text-lg font-bold leading-none text-white bg-orange-700 rounded-full">
+                    {{ $layawayOrders->count() }}
+                </span>
+            </div>
+
+
 
         </div>
     </div>
@@ -182,4 +206,384 @@
             </div>
         </div>
     </dialog>
+
+    <!-- Layaway Orders Modal -->
+    <dialog id="layaway_orders_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-5xl h-[80vh] p-10">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                onclick="document.getElementById('layaway_orders_modal').close()">✕</button>
+            <h3 class="font-bold text-3xl text-center mb-6">Layaway Orders</h3>
+
+            <div id="layaway_orders_content" class="grid grid-cols-1 gap-6">
+                <!-- Layaway Orders List -->
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr class="text-center">
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Order Date
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Customer
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Total Amount
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Payment Progress
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="layaway_orders_body" class="bg-white divide-y divide-gray-200">
+                        @foreach ($layawayOrders as $order)
+                            <tr class="text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ \Carbon\Carbon::parse($order->order_date)->format('F j, Y') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $order->customer->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    ₱{{ number_format($order->total_amount, 2) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $order->layawayPayments->filter(function ($payment) {
+                                            return $payment->is_initial_payment == 0;
+                                        })->count() }}/{{ $order->layaway_duration * 2 }}
+                                </td>
+
+                                @php
+                                    $hasPendingPayment = $order->layawayPayments->contains('status', 'Pending');
+
+                                    // Calculate the next payment due date based on the number of valid payments made
+                                    $validPaymentsCount = $order->layawayPayments->where('status', 'Accepted')->count();
+                                    $nextPaymentDueDate = \Carbon\Carbon::parse($order->order_date);
+
+                                    // Determine the next payment due date using the same logic as in the JavaScript
+                                    for ($i = 0; $i <= $validPaymentsCount; $i++) {
+                                        if ($nextPaymentDueDate->day <= 15) {
+                                            $nextPaymentDueDate->endOfMonth(); // Next payment at the end of the current month
+                                        } else {
+                                            $nextPaymentDueDate->addMonth()->day(15); // 15th of the next month
+                                        }
+                                    }
+
+                                    $isDueDate = $nextPaymentDueDate->isPast();
+
+                                    // Determine the button class based on the payment status
+                                    $buttonClass = 'text-emerald-600 hover:text-emerald-900'; // Default to emerald
+                                    if ($hasPendingPayment) {
+                                        $buttonClass = 'text-amber-600 hover:text-amber-900';
+                                    } elseif ($isDueDate) {
+                                        $buttonClass = 'text-red-600 hover:text-red-900';
+                                    }
+                                @endphp
+
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="viewLayawayDetails({{ $order->id }})"
+                                        class="{{ $buttonClass }}">
+                                        View Details
+                                    </button>
+                                </td>
+
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Layaway Details Modal -->
+    <dialog id="layaway_details_modal" class="modal z-40">
+        <div class="modal-box w-11/12 max-w-5xl h-[80vh] p-10 relative flex flex-col justify-between">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                onclick="document.getElementById('layaway_details_modal').close()">✕</button>
+            <h3 class="font-bold text-3xl text-center mb-6">Layaway Order Details</h3>
+
+            <div id="layaway_details_content" class="text-center mb-4">
+                <!-- Hidden input to store order ID -->
+                <input type="hidden" id="layaway_order_id" name="layaway_order_id">
+
+                <!-- Order Details -->
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6">
+                    <div>
+                        <p class="font-semibold text-gray-700">Customer:</p>
+                        <p class="text-lg" id="customer_name"></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Email:</p>
+                        <p class="text-lg" id="email"></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Phone Number:</p>
+                        <p class="text-lg" id="number"></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Order Date:</p>
+                        <p class="text-lg" id="order_date"></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Total Amount:</p>
+                        <p class="text-lg text-green-600">₱<span id="total_amount"></span></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Amount Paid:</p>
+                        <p class="text-lg text-blue-600">₱<span id="amount_paid"></span></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Remaining Balance:</p>
+                        <p class="text-lg text-red-600"><span id="remaining_balance"></span></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Payment Progress:</p>
+                        <p class="text-lg" id="payment_progress"></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Next Payment Amount:</p>
+                        <p class="text-lg text-orange-600"><span id="next_payment_amount"></span></p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Next Payment Due:</p>
+                        <p class="text-lg" id="next_payment_due"></p>
+                    </div>
+                </div>
+
+
+                <!-- Layaway Payments -->
+                <h4 class="font-bold text-2xl mb-4">Payments</h4>
+                <ul id="layaway_payments_list" class="space-y-4 mb-4">
+                    <!-- Payments will be dynamically added here -->
+                </ul>
+            </div>
+
+
+            <!-- Fully Paid Button -->
+            <div class="p-4">
+                <button class="btn btn-primary w-full text-white bg-green-600 hover:bg-green-700"
+                    onclick="markAsFullyPaid()">Mark as Fully Paid</button>
+            </div>
+
+            <!-- Image Display Div -->
+            <div id="imageDisplay"
+                class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+                <div class="relative">
+                    <img id="displayImage" src="" alt="Receipt Image"
+                        class="w-[700px] h-[700px] object-contain">
+                    <button type="button"
+                        class="absolute top-0 right-2 text-white text-3xl bg-transparent border-none cursor-pointer"
+                        onclick="closeImageDisplay()">✕</button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+
+
+
+    <script>
+        function markAsFullyPaid() {
+            const orderId = document.getElementById('layaway_order_id').value;
+            fetch(`/admin/mark-as-fully-paid/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order marked as fully paid successfully.');
+                        document.getElementById('layaway_details_modal').close();
+                        location.reload();
+                    } else {
+                        alert('An error occurred while marking the order as fully paid.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function viewLayawayDetails(orderId) {
+            fetch(`/admin/layaway-details/${orderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        var modal = document.getElementById('layaway_details_modal');
+                        if (modal) {
+                            document.getElementById('layaway_order_id').value = orderId;
+                            document.getElementById('customer_name').textContent = data.order.customer.name;
+                            document.getElementById('email').textContent = data.order.customer.email;
+                            document.getElementById('number').textContent = data.order.customer.phone_number;
+                            document.getElementById('order_date').textContent = new Date(data.order.order_date)
+                                .toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                });
+
+                            // Convert total_amount and amount_paid to a number before using toFixed()
+                            var totalAmount = Math.ceil(Number(data.order.total_amount) * 100) /
+                                100; // Rounding total amount to 2 decimal places
+                            document.getElementById('total_amount').textContent = totalAmount.toFixed(2);
+
+                            var amountPaid = Math.ceil(Number(data.order.amount_paid) * 100) /
+                                100; // Rounding amount paid to 2 decimal places
+                            document.getElementById('amount_paid').textContent = amountPaid.toFixed(2);
+
+                            // Calculate Remaining Balance
+                            var remainingBalance = Math.ceil((totalAmount - amountPaid) * 100) /
+                                100; // Rounding remaining balance to 2 decimal places
+                            document.getElementById('remaining_balance').textContent =
+                                `₱${remainingBalance.toFixed(2)}`;
+
+                            // Ensure data.payments is an array
+                            var payments = Array.isArray(data.order.layaway_payments) ? data.order.layaway_payments :
+                        [];
+
+                            // Filter payments to count only those with is_initial_payment == 0
+                            var validPaymentsCount = payments.filter(payment => payment.is_initial_payment == 0).length;
+
+                            document.getElementById('payment_progress').textContent =
+                                `${validPaymentsCount}/${data.order.layaway_duration * 2}`;
+
+                            // Calculate Next Payment Due Date
+                            var nextPaymentDueDate = getNextPaymentDueDate(validPaymentsCount);
+                            document.getElementById('next_payment_due').textContent = nextPaymentDueDate.format(
+                                'MMMM D, YYYY');
+
+                            // Calculate Next Payment Amount
+                            var newRemainingPayments = (data.order.layaway_duration * 2) - validPaymentsCount;
+                            var nextPaymentAmount = Math.ceil((remainingBalance / newRemainingPayments) * 100) /
+                                100; // Rounding next payment amount to 2 decimal places
+                            document.getElementById('next_payment_amount').textContent =
+                                `₱${nextPaymentAmount.toFixed(2)}`;
+
+                            var paymentsList = document.getElementById('layaway_payments_list');
+                            paymentsList.innerHTML = '';
+
+                            // Counter for payments after the down payment
+                            var paymentCounter = 1;
+
+                            payments.forEach((payment) => {
+                                var listItem = document.createElement('div');
+                                listItem.classList.add('flex', 'justify-between', 'items-center', 'border',
+                                    'border-gray-200', 'rounded-md', 'p-4', 'mb-2', 'bg-white', 'shadow-sm',
+                                    'flex-col', 'lg:flex-row');
+
+                                // Determine the payment label
+                                var paymentLabel = payment.is_initial_payment == 1 ? 'Down Payment' :
+                                    `Payment ${paymentCounter++}`;
+                                var statusColorClass = payment.status === 'Pending' ? 'text-amber-600' :
+                                    'text-emerald-600';
+
+                                listItem.innerHTML = `
+                        <div class="flex-1">
+                            <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel}</p>
+                            <p class="text-md text-gray-600">Amount: ₱${Math.ceil(Number(payment.amount) * 100) / 100}</p> <!-- Rounding payment amount to 2 decimal places -->
+                            <p class="text-md text-gray-600">Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
+                        </div>
+                        <div class="flex items-center">
+                            <img src="/storage/${payment.receipt}" alt="Receipt" class="w-24 h-24 cursor-pointer rounded-md object-cover lg:w-32 lg:h-32" onclick="showImageModal(this)">
+                            ${payment.status !== 'Accepted' ? `<button class="btn btn-sm bg-emerald-500 ml-4" onclick="acceptPayment(${payment.id}, ${orderId})">Accept Payment</button>` : ''}
+                        </div>
+                    `;
+                                paymentsList.appendChild(listItem);
+                            });
+
+                            modal.showModal();
+                        }
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+
+        // Function to determine the next payment due date based on payment progress
+        function getNextPaymentDueDate(paymentsMade) {
+            const today = dayjs();
+            let nextDueDate = today;
+
+            // Calculate the next due date based on the payment progress
+            for (let i = 0; i <= paymentsMade; i++) {
+                if (nextDueDate.date() <= 15) {
+                    nextDueDate = nextDueDate.endOf('month'); // Next payment at the end of the current month
+                } else {
+                    nextDueDate = nextDueDate.add(1, 'month').date(15); // 15th of the next month
+                }
+            }
+
+            return nextDueDate;
+        }
+
+
+
+
+        function showImageModal(element) {
+            var displayDiv = document.getElementById('imageDisplay');
+            var displayImg = document.getElementById('displayImage');
+            displayImg.src = element.src;
+            displayDiv.classList.remove('hidden');
+            displayDiv.classList.add('flex');
+        }
+
+        function closeImageDisplay() {
+            var displayDiv = document.getElementById('imageDisplay');
+            displayDiv.classList.add('hidden');
+            displayDiv.classList.remove('flex');
+        }
+
+        document.getElementById('imageDisplay').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeImageDisplay();
+            }
+        });
+
+
+
+        function acceptPayment(paymentId, orderId) {
+            fetch(`/admin/update-payment-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        payment_id: paymentId,
+                        status: 'Accepted'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        viewLayawayDetails(orderId);
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
 @endsection

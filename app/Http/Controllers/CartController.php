@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\CartItem;
+use App\Mail\OrderPlaced;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Intervention\Image\Laravel\Facades\Image;
 
 class CartController extends Controller
 {
@@ -164,11 +168,25 @@ public function updateAndCheckout(Request $request) {
 }
 
 public function payment(Request $request) {
-    // Validate the request data
+    // Validate the common request data
     $validatedData = $request->validate([
         'payment_receipt' => 'required|file|mimes:jpeg,png,pdf|max:5120',
         'shipping_instructions' => 'required|string|max:255',
     ]);
+
+    // Check for layaway toggle
+    $layawayToggle = $request->has('layaway_toggle') && $request->input('layaway_toggle') == 'on';
+
+    // Conditional validation for layaway fields
+    if ($layawayToggle) {
+        $validatedData = array_merge($validatedData, $request->validate([
+            'layaway_deposit' => 'required|numeric|min:' . ($request->input('total_amount') * 0.2),
+            'layaway_duration' => 'required|in:1,2,3',
+        ]));
+    }
+
+    // Determine payment method
+    $paymentMethod = $layawayToggle ? 'layaway' : 'fully paid';
 
     // Fetch cart items for the authenticated user
     $cartItems = CartItem::where('user_id', auth()->id())->get();
@@ -191,6 +209,16 @@ public function payment(Request $request) {
     DB::beginTransaction();
 
     try {
+        // Convert the receipt to WebP format
+        $receiptPath = null;
+        if ($request->hasFile('payment_receipt')) {
+            $receipt = $request->file('payment_receipt');
+            $imageName = time() . '-' . uniqid() . '.webp';
+            $webpImage = Image::read($receipt);
+            $webpImage->save(public_path('storage/receipts/' . $imageName));
+            $receiptPath = 'receipts/' . $imageName;
+        }
+
         // Insert data into orders table
         $order = Order::create([
             'customer_id' => auth()->id(),
@@ -201,8 +229,23 @@ public function payment(Request $request) {
             'tracking_number' => 'TBD',
             'shipping_status' => 'preparing',
             'shipping_procedure' => $validatedData['shipping_instructions'],
-            'num_orders' => $totalItems
+            'num_orders' => $totalItems,
+            'payment_method' => $paymentMethod,
+            'layaway_deposit' => $paymentMethod == 'layaway' ? $request->input('layaway_deposit') : null,
+            'layaway_duration' => $paymentMethod == 'layaway' ? $request->input('layaway_duration') : null,
+            'receipt' => $receiptPath,
         ]);
+
+        if ($paymentMethod == 'layaway') {
+            // Add the first layaway payment record
+            $order->layawayPayments()->create([
+                'payment_date' => now(),
+                'amount' => $request->input('layaway_deposit'),
+                'status' => 'Pending', // Default status is pending
+                'receipt' => $receiptPath, // Store the receipt path
+                'is_initial_payment' => true, // Mark as initial payment
+            ]);
+        }
 
         foreach ($cartItems as $cartItem) {
             // Decrement the quantity of the product variant
@@ -222,12 +265,12 @@ public function payment(Request $request) {
         // Commit the transaction
         DB::commit();
 
-        if ($request->hasFile('payment_receipt')) {
-            $receiptPath = $request->file('payment_receipt')->store('receipts', 'public');
-
-            // Update the order instance with receipt path
-            $order->receipt = $receiptPath; // Use 'receipt' instead of 'receipt_path'
-            $order->save();
+        // Send email notification
+        try {
+            $email = env('MAIL_USERNAME');
+            Mail::to($email)->send(new OrderPlaced($order));
+        } catch (\Exception $e) {
+            Log::error('Email sending failed: ' . $e->getMessage());
         }
 
         // Delete cart items after successful purchase
@@ -238,10 +281,18 @@ public function payment(Request $request) {
     } catch (\Exception $e) {
         // Rollback the transaction if an error occurs
         DB::rollBack();
+        Log::error('Checkout Error: ' . $e->getMessage());
         // Handle the error gracefully
         return back()->with('error', 'An error occurred during checkout. Please try again later.');
     }
 }
+
+
+
+
+
+
+
 
 
 
