@@ -155,20 +155,45 @@ class OrderController extends Controller
     }
 
     public function updateStatus(Request $request, $orderId)
-{
-    $order = Order::find($orderId);
-
-    if ($order) {
-        $order->shipping_method = $request->input('shipping_method');
-        $order->tracking_number = $request->input('tracking_number');
-        $order->shipping_status = $request->input('shipping_status');
-        $order->save();
-
-        return response()->json(['success' => true]);
-    } else {
-        return response()->json(['success' => false, 'message' => 'Order not found']);
+    {
+        $order = Order::find($orderId);
+    
+        if ($order) {
+            // Check if the status is declined
+            if ($request->input('shipping_status') === 'declined') {
+                // Fetch all the transactions related to the order
+                $transactions = Transaction::where('order_id', $orderId)->get();
+    
+                foreach ($transactions as $transaction) {
+                    // Update the product_variant quantity by adding back the quantity from the transaction
+                    $productVariant = ProductVariant::find($transaction->variant_id);
+                    if ($productVariant) {
+                        $productVariant->quantity += $transaction->quantity;
+                        $productVariant->save();
+                    }
+                }
+    
+                // Delete the order from the orders table
+                $order->delete();
+    
+                // Optionally, delete the transactions related to this order
+                Transaction::where('order_id', $orderId)->delete();
+    
+                return response()->json(['success' => true, 'message' => 'Order declined and stock updated.']);
+            }
+    
+            // For non-declined statuses, simply update the order details
+            $order->shipping_method = $request->input('shipping_method');
+            $order->tracking_number = $request->input('tracking_number');
+            $order->shipping_status = $request->input('shipping_status');
+            $order->save();
+    
+            return response()->json(['success' => true, 'message' => 'Order status updated.']);
+        } else {
+            return response()->json(['success' => false, 'message' => 'Order not found']);
+        }
     }
-}
+    
 
 public function viewItems($orderId)
 {
@@ -231,8 +256,11 @@ public function layawayPayments(Order $order)
     $totalPaymentsRequired = $order->layaway_duration * 2;
     $months = $order->layaway_duration;
 
-    // Fetch all layaway payments
-    $allPayments = $order->layawayPayments()->get();
+    // Fetch layaway payments with status of 'Pending' and 'Accepted'
+    $allPayments = $order->layawayPayments()->whereIn('status', ['Pending', 'Accepted'])->get();
+
+    // Fetch layaway payments with status of 'Declined'
+    $declinedPayments = $order->layawayPayments()->where('status', 'Declined')->get();
 
     // Separate initial payment and other payments
     $initialPayment = $allPayments->where('is_initial_payment', true)->first();
@@ -270,8 +298,10 @@ public function layawayPayments(Order $order)
         'remainingBalance' => $remainingBalance,
         'amount_paid' => $order->amount_paid,
         'allPayments' => $allPayments,
+        'declinedPayments' => $declinedPayments, // Pass the declined payments separately
     ]);
 }
+
 
 
 public function addLayawayPayment(Request $request)

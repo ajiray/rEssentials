@@ -20,29 +20,34 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'brand' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:255', // Add validation for the category
+            'category' => 'required|string|max:255',
         ]);
     
-        // Extract the first letters of the name and brand
-        $nameInitial = strtoupper(substr($validatedData['name'], 0, 1));
-        $brandInitial = strtoupper(substr($validatedData['brand'], 0, 1));
+        // Generate the acronym from the brand name
+        $brandWords = explode(' ', $validatedData['brand']);
+        $brandAcronym = '';
+        
+        foreach ($brandWords as $word) {
+            $brandAcronym .= strtoupper(substr($word, 0, 1));
+        }
     
-        // Find the highest existing code number for this name and brand
-        $existingProducts = Product::where('name', $validatedData['name'])
-            ->where('brand', $validatedData['brand'])
+        // Find the highest existing code number for this brand in the description
+        $existingProducts = Product::where('brand', $validatedData['brand'])
             ->get();
-    
+        
         $maxCodeNumber = 0;
         foreach ($existingProducts as $product) {
             $description = $product->description;
-            if (preg_match('/' . $nameInitial . $brandInitial . '(\d+)/', $description, $matches)) {
+    
+            // Search for the pattern of the brand acronym followed by a number
+            if (preg_match('/\b' . $brandAcronym . '(\d+)\b/', $description, $matches)) {
                 $maxCodeNumber = max($maxCodeNumber, (int)$matches[1]);
             }
         }
     
         // Generate the new code
         $newCodeNumber = $maxCodeNumber + 1;
-        $newCode = $nameInitial . $brandInitial . $newCodeNumber;
+        $newCode = $brandAcronym . $newCodeNumber;
     
         // Append the generated code to the description
         $validatedData['description'] = isset($validatedData['description']) ? $validatedData['description'] . ' ' . $newCode : $newCode;
@@ -53,6 +58,8 @@ class ProductController extends Controller
         // Redirect the user back to the product index page
         return redirect()->back()->with('success', 'Product added successfully.');
     }
+    
+    
     
     
 

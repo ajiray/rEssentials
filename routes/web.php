@@ -237,6 +237,8 @@ Route::get('/admin/layaway-details/{order}', [AdminController::class, 'getLayawa
 Route::post('/admin/update-payment-status', [AdminController::class, 'updatePaymentStatus']);
 
 Route::post('/admin/mark-as-fully-paid/{order}', [AdminController::class, 'markAsFullyPaid']);
+Route::post('/admin/cancel-order/{order}', [AdminController::class, 'cancelOrder']);
+
 
 
 

@@ -135,7 +135,7 @@
                                             </th>
                                             <th scope="col"
                                                 class="px-6 py-3 text-sm font-semibold uppercase tracking-widest">
-                                                Shipping Status
+                                                Status
                                             </th>
                                             <th scope="col"
                                                 class="px-6 py-3 text-sm font-semibold uppercase tracking-widest">
@@ -237,7 +237,7 @@
                     <span class="text-gray-700">{{ date('F j, Y', strtotime($order->order_date)) }}</span>
                 </div>
                 <div class="mb-2">
-                    <span class="font-semibold text-velvet">Shipping Status:</span>
+                    <span class="font-semibold text-velvet">Status:</span>
                     <span
                         class="px-2 py-1 rounded-full
                         @if ($order->shipping_status == 'delivered') bg-emerald-100 text-emerald-600
@@ -386,6 +386,7 @@
                                 Number(data.totalAmount),
                                 Number(data.remainingBalance),
                                 Number(data.amount_paid),
+                                data.declinedPayments
                             );
                         }
                     } else {
@@ -398,7 +399,7 @@
         }
 
         function populateLayawayPayments(allPayments, paymentsMade, totalPaymentsRequiredInput,
-            nextPaymentDate, months, nextPaymentAmount, totalAmountInput, remainingBalance, amountPaid) {
+            nextPaymentDate, months, nextPaymentAmount, totalAmountInput, remainingBalance, amountPaid, declinedPayments) {
 
             var paymentList = document.getElementById('layawayPaymentList');
             var totalAmountElement = document.getElementById('totalAmount');
@@ -435,8 +436,6 @@
             if (nextPaymentAmountElement) {
                 nextPaymentAmountElement.textContent =
                     `Next Payment Amount: ₱${(Math.ceil(nextPaymentAmount * 100) / 100).toFixed(2)}`; // Convert to cents and back to decimal
-
-
             }
 
             if (paymentList) {
@@ -444,28 +443,43 @@
 
                 // Iterate over allPayments and display each payment
                 allPayments.forEach(payment => {
-                    var statusColorClass = payment.status === 'Pending' ? 'text-amber-600' : 'text-emerald-600';
+                    var statusColorClass = payment.status === 'Pending' ? 'text-amber-600' :
+                        (payment.status === 'Declined' ? 'text-red-600' : 'text-emerald-600');
+
                     var paymentLabel = payment.is_initial_payment ? 'Down Payment' : 'Payment';
 
                     var listItem = document.createElement('li');
                     listItem.classList.add('border', 'border-gray-200', 'rounded-md', 'p-4', 'mb-4', 'flex',
                         'flex-col', 'bg-white', 'shadow-sm');
                     listItem.innerHTML = `
-                <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel} Date: ${dayjs(payment.payment_date).format('MMMM D, YYYY')}</p>
-                <p class="text-md text-gray-600">Amount: ₱${Number(payment.amount).toFixed(2)}</p>
-                <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
-                ${payment.status === 'Pending' ? '<p class="text-sm text-red-500">(The next payment amount is not accurate until this payment is confirmed)</p>' : ''}
+            <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel} Date: ${dayjs(payment.payment_date).format('MMMM D, YYYY')}</p>
+            <p class="text-md text-gray-600">Amount: ₱${Number(payment.amount).toFixed(2)}</p>
+            <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
+            `;
+                    paymentList.appendChild(listItem);
+                });
+
+                // Display Declined Payments
+                declinedPayments.forEach(payment => {
+                    var listItem = document.createElement('li');
+                    listItem.classList.add('border', 'border-red-500', 'rounded-md', 'p-4', 'mb-4', 'flex',
+                        'flex-col', 'bg-red-50', 'shadow-sm');
+                    listItem.innerHTML = `
+            <p class="text-lg font-semibold mb-2 text-red-800">Declined Payment</p>
+            <p class="text-md text-gray-600">Amount: ₱${Number(payment.amount).toFixed(2)}</p>
+            <p class="text-md text-gray-600">Date: ${dayjs(payment.payment_date).format('MMMM D, YYYY')}</p>
+            <p class="text-md text-gray-600">Reason: ${payment.decline_reason || 'N/A'}</p>
             `;
                     paymentList.appendChild(listItem);
                 });
 
                 minimumPayment = nextPaymentAmount;
-                paymentAmountInput.min = minimumPayment.toFixed(
-                    2); // Ensure the minimum amount is rounded to 2 decimal places
+                paymentAmountInput.min = minimumPayment.toFixed(2);
                 totalAmount = totalAmountInput;
                 totalPaymentsRequired = totalPaymentsRequiredInput;
             }
         }
+
 
         function getNextPaymentDueDate(paymentsMade) {
             const today = dayjs();

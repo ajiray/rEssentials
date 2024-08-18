@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Models\LayawayPayment;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -177,7 +178,14 @@ public function unbanUser(User $user)
 
 public function getLayawayDetails(Order $order)
 {
-    $order->load('customer', 'layawayPayments');
+    // Load accepted and pending payments
+    $order->load(['customer', 'layawayPayments' => function ($query) {
+        $query->whereIn('status', ['Accepted', 'Pending']);
+    }]);
+
+    // Load declined payments separately
+    $declinedPayments = $order->layawayPayments()->where('status', 'Declined')->get();
+    
     $paymentsMade = $order->layawayPayments->count();
     $totalPayments = $order->layaway_duration * 2;
 
@@ -186,30 +194,54 @@ public function getLayawayDetails(Order $order)
         'order' => $order,
         'total_payments' => $totalPayments,
         'amount_paid' => $order->amount_paid, // Include amount_paid in the response
+        'declined_payments' => $declinedPayments, // Pass the declined payments
     ]);
 }
+
 
 
 public function updatePaymentStatus(Request $request)
 {
-    $request->validate([
-        'payment_id' => 'required|exists:layaway_payments,id',
-        'status' => 'required|in:pending,Accepted,rejected',
-    ]);
+    try {
+        // Validate the request
+        $request->validate([
+            'payment_id' => 'required|exists:layaway_payments,id',
+            'status' => 'required|in:Pending,Accepted,Declined',
+            'decline_reason' => 'nullable|string|max:255', // Validate decline_reason if present
+        ]);
 
-    $payment = LayawayPayment::find($request->payment_id);
-    $payment->status = $request->status;
-    $payment->save();
+        // Find the payment
+        $payment = LayawayPayment::find($request->payment_id);
 
-    // If the payment is accepted, add the payment amount to the order's amount_paid
-    if ($request->status === 'Accepted') {
-        $order = $payment->order;
-        $order->amount_paid += $payment->amount;
-        $order->save();
+        // Update the status
+        $payment->status = $request->status;
+
+        // If the status is declined, save the decline reason
+        if ($request->status === 'Declined') {
+            $payment->decline_reason = $request->input('decline_reason');
+        }
+
+        $payment->save();
+
+        // If the payment is accepted, update the order's amount_paid
+        if ($request->status === 'Accepted') {
+            $order = $payment->order;
+            $order->amount_paid += $payment->amount;
+            $order->save();
+        }
+
+        // Return a JSON response indicating success
+        return response()->json(['success' => true, 'message' => 'Payment status updated successfully!']);
+    } catch (\Exception $e) {
+        // Log the error message
+        Log::error('Error updating payment status: ' . $e->getMessage());
+
+        // Return an error response
+        return response()->json(['success' => false, 'message' => 'An error occurred while updating the payment status.']);
     }
-
-    return response()->json(['success' => true, 'message' => 'Payment status updated successfully!']);
 }
+
+
 
 
 public function markAsFullyPaid(Order $order)
@@ -224,6 +256,24 @@ public function markAsFullyPaid(Order $order)
 
     return response()->json(['success' => true, 'message' => 'Order marked as fully paid successfully!']);
 }
+
+public function cancelOrder(Order $order)
+{
+    try {
+        // Restore product stock before deleting the order
+        foreach ($order->items as $item) {
+            $item->variant->increment('quantity', $item->quantity);
+        }
+
+        // Delete the order
+        $order->delete();
+
+        return response()->json(['success' => true, 'message' => 'Order canceled successfully!']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
+    }
+}
+
 
 
 }

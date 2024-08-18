@@ -226,7 +226,9 @@
                             <option value="preparing">Preparing</option>
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
+                            <option value="declined">Declined</option>
                         </select>
+
                         <x-input-error class="mt-2" :messages="$errors->get('shipping_status')" />
                     </div>
                     <button type="submit"
@@ -605,13 +607,15 @@
                         <input type="text" id="trackingNumber" name="tracking_number" value="${order.tracking_number}" class="mt-1 p-2 border border-gray-300 rounded-md w-full">
                     </div>
                     <div class="mb-4">
-                        <label for="shippingStatus" class="block text-sm font-medium text-gray-700">Shipping Status</label>
-                        <select id="shippingStatus" name="shipping_status" class="mt-1 p-2 border border-gray-300 rounded-md w-full">
-                            <option value="preparing" ${order.shipping_status === 'preparing' ? 'selected' : ''}>Preparing</option>
-                            <option value="shipped" ${order.shipping_status === 'shipped' ? 'selected' : ''}>Shipped</option>
-                            <option value="delivered" ${order.shipping_status === 'delivered' ? 'selected' : ''}>Delivered</option>
-                        </select>
-                    </div>
+    <label for="shippingStatus" class="block text-sm font-medium text-gray-700">Shipping Status</label>
+    <select id="shippingStatus" name="shipping_status" class="mt-1 p-2 border border-gray-300 rounded-md w-full">
+        <option value="preparing" ${order.shipping_status === 'preparing' ? 'selected' : ''}>Preparing</option>
+        <option value="shipped" ${order.shipping_status === 'shipped' ? 'selected' : ''}>Shipped</option>
+        <option value="delivered" ${order.shipping_status === 'delivered' ? 'selected' : ''}>Delivered</option>
+        <option value="declined" ${order.shipping_status === 'declined' ? 'selected' : ''}>Declined</option>
+    </select>
+</div>
+
                     <button type="button" onclick="updateOrder()" class="btn btn-primary w-full mt-4">Save</button>
                 `;
 

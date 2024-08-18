@@ -221,6 +221,10 @@
                         <tr class="text-center">
                             <th scope="col"
                                 class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Order ID
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Order Date
                             </th>
                             <th scope="col"
@@ -244,6 +248,9 @@
                     <tbody id="layaway_orders_body" class="bg-white divide-y divide-gray-200">
                         @foreach ($layawayOrders as $order)
                             <tr class="text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $order->id }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     {{ \Carbon\Carbon::parse($order->order_date)->format('F j, Y') }}
                                 </td>
@@ -367,9 +374,16 @@
 
             <!-- Fully Paid Button -->
             <div class="p-4">
-                <button class="btn btn-primary w-full text-white bg-green-600 hover:bg-green-700"
+                <button class="btn btn-primary w-full text-white bg-emerald-600 hover:bg-emerald-700 border-0"
                     onclick="markAsFullyPaid()">Mark as Fully Paid</button>
             </div>
+
+            <!-- Cancel Order Button -->
+            <div class="p-4">
+                <button class="btn btn-primary w-full text-white bg-red-600 hover:bg-red-700 border-0"
+                    onclick="cancelOrder()">Cancel Order</button>
+            </div>
+
 
             <!-- Image Display Div -->
             <div id="imageDisplay"
@@ -413,6 +427,30 @@
                 });
         }
 
+        function cancelOrder() {
+            const orderId = document.getElementById('layaway_order_id').value;
+            fetch(`/admin/cancel-order/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order canceled successfully.');
+                        document.getElementById('layaway_details_modal').close();
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
         function viewLayawayDetails(orderId) {
             fetch(`/admin/layaway-details/${orderId}`, {
                     method: 'GET',
@@ -438,23 +476,21 @@
                                 });
 
                             // Convert total_amount and amount_paid to a number before using toFixed()
-                            var totalAmount = Math.ceil(Number(data.order.total_amount) * 100) /
-                                100; // Rounding total amount to 2 decimal places
+                            var totalAmount = Math.ceil(Number(data.order.total_amount) * 100) / 100;
                             document.getElementById('total_amount').textContent = totalAmount.toFixed(2);
 
-                            var amountPaid = Math.ceil(Number(data.order.amount_paid) * 100) /
-                                100; // Rounding amount paid to 2 decimal places
+                            var amountPaid = Math.ceil(Number(data.order.amount_paid) * 100) / 100;
                             document.getElementById('amount_paid').textContent = amountPaid.toFixed(2);
 
                             // Calculate Remaining Balance
-                            var remainingBalance = Math.ceil((totalAmount - amountPaid) * 100) /
-                                100; // Rounding remaining balance to 2 decimal places
+                            var remainingBalance = Math.ceil((totalAmount - amountPaid) * 100) / 100;
                             document.getElementById('remaining_balance').textContent =
                                 `₱${remainingBalance.toFixed(2)}`;
 
-                            // Ensure data.payments is an array
+                            // Ensure data.order.layaway_payments is an array
                             var payments = Array.isArray(data.order.layaway_payments) ? data.order.layaway_payments :
                         [];
+                            var declinedPayments = Array.isArray(data.declined_payments) ? data.declined_payments : [];
 
                             // Filter payments to count only those with is_initial_payment == 0
                             var validPaymentsCount = payments.filter(payment => payment.is_initial_payment == 0).length;
@@ -469,17 +505,15 @@
 
                             // Calculate Next Payment Amount
                             var newRemainingPayments = (data.order.layaway_duration * 2) - validPaymentsCount;
-                            var nextPaymentAmount = Math.ceil((remainingBalance / newRemainingPayments) * 100) /
-                                100; // Rounding next payment amount to 2 decimal places
+                            var nextPaymentAmount = Math.ceil((remainingBalance / newRemainingPayments) * 100) / 100;
                             document.getElementById('next_payment_amount').textContent =
                                 `₱${nextPaymentAmount.toFixed(2)}`;
 
                             var paymentsList = document.getElementById('layaway_payments_list');
                             paymentsList.innerHTML = '';
 
-                            // Counter for payments after the down payment
+                            // Display accepted and pending payments
                             var paymentCounter = 1;
-
                             payments.forEach((payment) => {
                                 var listItem = document.createElement('div');
                                 listItem.classList.add('flex', 'justify-between', 'items-center', 'border',
@@ -489,21 +523,70 @@
                                 // Determine the payment label
                                 var paymentLabel = payment.is_initial_payment == 1 ? 'Down Payment' :
                                     `Payment ${paymentCounter++}`;
-                                var statusColorClass = payment.status === 'Pending' ? 'text-amber-600' :
-                                    'text-emerald-600';
 
+                                // Determine the status color
+                                var statusColorClass = payment.status === 'Pending' ? 'text-amber-600' :
+                                    (payment.status === 'Declined' ? 'text-red-600' : 'text-emerald-600');
+
+                                // Build the innerHTML
                                 listItem.innerHTML = `
-                        <div class="flex-1">
-                            <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel}</p>
-                            <p class="text-md text-gray-600">Amount: ₱${Math.ceil(Number(payment.amount) * 100) / 100}</p> <!-- Rounding payment amount to 2 decimal places -->
-                            <p class="text-md text-gray-600">Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
-                        </div>
-                        <div class="flex items-center">
+                            <div class="flex-1">
+                                <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel}</p>
+                                <p class="text-md text-gray-600">Amount: ₱${Math.ceil(Number(payment.amount) * 100) / 100}</p>
+                                <p class="text-md text-gray-600">Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
+                            </div>
                             <img src="/storage/${payment.receipt}" alt="Receipt" class="w-24 h-24 cursor-pointer rounded-md object-cover lg:w-32 lg:h-32" onclick="showImageModal(this)">
-                            ${payment.status !== 'Accepted' ? `<button class="btn btn-sm bg-emerald-500 ml-4" onclick="acceptPayment(${payment.id}, ${orderId})">Accept Payment</button>` : ''}
-                        </div>
-                    `;
+                            ${payment.status === 'Pending' ? `
+                                                              <div class="flex flex-col space-y-3 items-center">
+                                <button class="btn btn-sm bg-emerald-500 ml-4" onclick="updatePaymentStatus(${payment.id}, ${orderId}, 'Accepted')">Accept Payment</button>
+                                <button class="btn btn-sm bg-red-500 ml-4" onclick="openDeclineReasonModal(${payment.id}, ${orderId})">Decline Payment</button>
+                            </div>
+
+                            <dialog id="decline_reason_modal" class="modal">
+                                <div class="modal-box w-11/12 max-w-md">
+                                    <h3 class="font-bold text-lg">Decline Payment</h3>
+                                    <p class="py-4">Please provide a reason for declining this payment:</p>
+                                    <input type="hidden" id="decline_payment_id">
+                                    <input type="hidden" id="decline_order_id">
+                                    <textarea id="decline_reason" class="textarea textarea-bordered w-full" placeholder="Enter reason..."></textarea>
+                                    <div class="modal-action">
+                                        <button class="btn" onclick="submitDeclineReason()">Submit</button>
+                                        <button class="btn" onclick="closeDeclineReasonModal()">Cancel</button>
+                                    </div>
+                                </div>
+                            </dialog>
+
+
+                                                            ` : ''}
+                        `;
+                                paymentsList.appendChild(listItem);
+                            });
+
+                            // Display declined payments
+                            declinedPayments.forEach((payment) => {
+                                var listItem = document.createElement('div');
+                                listItem.classList.add('flex', 'justify-between', 'items-center', 'border',
+                                    'border-gray-200', 'rounded-md', 'p-4', 'mb-2', 'bg-white', 'shadow-sm',
+                                    'flex-col', 'lg:flex-row');
+
+                                // Determine the payment label for declined payments
+                                var paymentLabel = `Declined Payment`;
+
+                                // Status color is always red for declined payments
+                                var statusColorClass = 'text-red-600';
+
+                                // Build the innerHTML for declined payments with the reason
+                                listItem.innerHTML = `
+        <div class="flex-1">
+            <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel}</p>
+            <p class="text-md text-gray-600">Amount: ₱${Math.ceil(Number(payment.amount) * 100) / 100}</p>
+            <p class="text-md text-gray-600">Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
+            <p class="text-md text-gray-600">Reason: ${payment.decline_reason ? payment.decline_reason : 'No reason provided'}</p>
+        </div>
+        <img src="/storage/${payment.receipt}" alt="Receipt" class="w-24 h-24 cursor-pointer rounded-md object-cover lg:w-32 lg:h-32" onclick="showImageModal(this)">
+    `;
                                 paymentsList.appendChild(listItem);
                             });
 
@@ -516,6 +599,30 @@
                 .catch(error => {
                     console.error('Error:', error);
                 });
+        }
+
+        function openDeclineReasonModal(paymentId, orderId) {
+            document.getElementById('decline_payment_id').value = paymentId;
+            document.getElementById('decline_order_id').value = orderId;
+            document.getElementById('decline_reason_modal').showModal();
+        }
+
+        function closeDeclineReasonModal() {
+            document.getElementById('decline_reason_modal').close();
+        }
+
+        function submitDeclineReason() {
+            const paymentId = document.getElementById('decline_payment_id').value;
+            const orderId = document.getElementById('decline_order_id').value;
+            const declineReason = document.getElementById('decline_reason').value;
+
+            if (declineReason.trim() === '') {
+                alert('Please provide a reason for declining the payment.');
+                return;
+            }
+
+            updatePaymentStatus(paymentId, orderId, 'Declined', declineReason);
+            closeDeclineReasonModal();
         }
 
 
@@ -561,7 +668,7 @@
 
 
 
-        function acceptPayment(paymentId, orderId) {
+        function updatePaymentStatus(paymentId, orderId, status, declineReason = null) {
             fetch(`/admin/update-payment-status`, {
                     method: 'POST',
                     headers: {
@@ -570,13 +677,14 @@
                     },
                     body: JSON.stringify({
                         payment_id: paymentId,
-                        status: 'Accepted'
+                        status: status,
+                        decline_reason: declineReason
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        viewLayawayDetails(orderId);
+                        viewLayawayDetails(orderId); // Refresh the layaway details
                     } else {
                         console.error(data.message);
                     }
