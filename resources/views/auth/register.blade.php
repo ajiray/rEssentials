@@ -1,6 +1,6 @@
 <x-guest-layout>
     <div
-        class="flex flex-col lg:flex-row justify-center items-center shadow-lg h-auto w-full lg:w-[90%] lg:max-w-6xl mx-auto relative bg-gold">
+        class="flex flex-col lg:flex-row justify-center items-center shadow-lg h-auto w-full lg:w-[90%] lg:max-w-6xl mx-auto relative bg-gray-200">
         <!-- Sign Up Form -->
         <form method="POST" action="{{ route('register') }}" class="w-full lg:w-[50%] h-full bg-white space-y-4 p-8">
             @csrf

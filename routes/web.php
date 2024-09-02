@@ -24,7 +24,8 @@ Route::get('/', function () {
         $query->where('quantity', '>', 0)->with('images');
     }])->whereHas('variants', function ($query) {
         $query->where('quantity', '>', 0);
-    })->get();
+    })->orderBy('id', 'desc')->get();
+
 
     return view('welcome', ['products' => $products]);
 });
@@ -59,10 +60,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
 //admin side
 Route::get('/admindashboard', function () {
     // Sales Data
-    $totalRevenue = Order::sum('total_amount');
-    $totalSales = Order::count();
-    $totalItemsSold = Transaction::sum('quantity');
+    $totalRevenue = Order::where('shipping_status', '!=', 'Declined')->sum('total_amount');
+
+    $totalSales = Order::where('shipping_status', '!=', 'Declined')->count();
+    $totalItemsSold = Transaction::whereHas('order', function ($query) {
+        $query->where('shipping_status', '!=', 'Declined');
+    })->sum('quantity');
+    
     $averageOrderValue = $totalSales ? $totalRevenue / $totalSales : 0;
+    $totalDeclined = Order::where('shipping_status', 'Declined')->count();
     
     $layawayOrders = Order::where('payment_method', 'layaway')
     ->with('customer')
@@ -71,42 +77,53 @@ Route::get('/admindashboard', function () {
 
 
     $topSellingProducts = Transaction::select('variant_id', DB::raw('SUM(quantity) as total_quantity'))
-        ->groupBy('variant_id')
-        ->orderByDesc('total_quantity')
-        ->take(5)
-        ->with('variant.product')
-        ->get();
+    ->whereHas('order', function ($query) {
+        $query->where('shipping_status', '!=', 'Declined');
+    })
+    ->groupBy('variant_id')
+    ->orderByDesc('total_quantity')
+    ->take(5)
+    ->with('variant.product')
+    ->get();
+
 
     $salesByCategory = Product::select('category', DB::raw('SUM(transactions.quantity * transactions.price) as total_sales'))
-        ->join('product_variants', 'product_variants.product_id', '=', 'products.id')
-        ->join('transactions', 'transactions.variant_id', '=', 'product_variants.id')
-        ->groupBy('category')
-        ->get();
+    ->join('product_variants', 'product_variants.product_id', '=', 'products.id')
+    ->join('transactions', 'transactions.variant_id', '=', 'product_variants.id')
+    ->join('orders', 'orders.id', '=', 'transactions.order_id')  // Join with orders table
+    ->where('orders.shipping_status', '!=', 'Declined')  // Exclude declined orders
+    ->groupBy('category')
+    ->get();
 
     // Customer Data
     $totalCustomers = User::where('userType', 'user')->count();
     $newCustomers = User::where('userType', 'user')
         ->where('created_at', '>=', now()->subMonth())
-        ->count(); // New customers in the last month
+        ->count();
 
-    $topCustomers = User::select('users.id', 'users.name', 'users.email', DB::raw('SUM(orders.total_amount) as total_spent'))
+        $topCustomers = User::select('users.id', 'users.name', 'users.email', DB::raw('SUM(orders.total_amount) as total_spent'))
         ->join('orders', 'orders.customer_id', '=', 'users.id')
         ->where('users.userType', 'user')
+        ->where('orders.shipping_status', '!=', 'Declined')  // Exclude declined orders
         ->groupBy('users.id', 'users.name', 'users.email')
         ->orderByDesc('total_spent')
         ->take(5)
         ->get();
+    
 
     // Purchase Frequency (average number of purchases per customer)
-    $totalOrders = Order::count();
+    $totalOrders = Order::where('shipping_status', '!=', 'Declined')->count();
     $purchaseFrequency = $totalCustomers ? $totalOrders / $totalCustomers : 0;
 
     // Customer Retention Rate
     $repeatCustomers = User::where('userType', 'user')
-        ->whereHas('orders', function ($query) {
-            $query->groupBy('customer_id')->havingRaw('COUNT(*) > 1');
-        })
-        ->count();
+    ->whereHas('orders', function ($query) {
+        $query->where('shipping_status', '!=', 'Declined')
+              ->groupBy('customer_id')
+              ->havingRaw('COUNT(*) > 1');
+    })
+    ->count();
+
     $customerRetentionRate = $totalCustomers ? ($repeatCustomers / $totalCustomers) * 100 : 0;
 
     // Inventory Data
@@ -152,6 +169,7 @@ Route::get('/admindashboard', function () {
         'productsByCategory' => $productsByCategory,
         'inventoryTurnoverRate' => $inventoryTurnoverRate,
         'layawayOrders' => $layawayOrders, // Add this line
+        'totalDeclined' => $totalDeclined,
     ]);
 })->name('admindashboard');
 
@@ -240,6 +258,10 @@ Route::post('/admin/mark-as-fully-paid/{order}', [AdminController::class, 'markA
 Route::post('/admin/cancel-order/{order}', [AdminController::class, 'cancelOrder']);
 
 
+
+
+// In your web.php or api.php routes file
+Route::get('/waybill/{orderId}', [AdminController::class, 'getWaybillDetails']);
 
 
 

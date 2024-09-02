@@ -171,11 +171,13 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div
                                     class="px-4 py-2 rounded-full inline-block
-                                                        @if ($order->shipping_status == 'delivered') bg-emerald-100 text-emerald-600
-                                                        @elseif ($order->shipping_status == 'shipped') bg-blue-100 text-blue-600
-                                                        @elseif ($order->shipping_status == 'preparing') bg-amber-100 text-amber-600 @endif">
+                                    @if ($order->shipping_status == 'delivered') bg-emerald-100 text-emerald-600
+                                    @elseif ($order->shipping_status == 'shipped') bg-blue-100 text-blue-600
+                                    @elseif ($order->shipping_status == 'preparing') bg-amber-100 text-amber-600
+                                    @elseif ($order->shipping_status == 'Declined') bg-red-100 text-red-600 @endif">
                                     {{ $order->shipping_status }}
                                 </div>
+
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-gray-800">
                                 <div class="text-sm font-medium tracking-wide">
@@ -192,11 +194,18 @@
                                             class="text-indigo-600 hover:text-indigo-800 font-semibold">
                                             {{ $order->payment_method }}
                                         </button>
+                                    @elseif ($order->payment_method == 'Cancelled')
+                                        <span class="text-red-600 font-semibold">
+                                            {{ $order->payment_method }}
+                                        </span>
                                     @else
-                                        {{ $order->payment_method }}
+                                        <span class="text-emerald-600 font-semibold">
+                                            {{ $order->payment_method }}
+                                        </span>
                                     @endif
                                 </div>
                             </td>
+
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <button onclick="viewItems({{ $order->id }})"
                                     class="text-indigo-600 hover:text-indigo-800 font-semibold">View
@@ -240,11 +249,13 @@
                     <span class="font-semibold text-velvet">Status:</span>
                     <span
                         class="px-2 py-1 rounded-full
-                        @if ($order->shipping_status == 'delivered') bg-emerald-100 text-emerald-600
-                        @elseif ($order->shipping_status == 'shipped') bg-blue-100 text-blue-600
-                        @elseif ($order->shipping_status == 'preparing') bg-amber-100 text-amber-600 @endif">
+                    @if ($order->shipping_status == 'delivered') bg-emerald-100 text-emerald-600
+                    @elseif ($order->shipping_status == 'shipped') bg-blue-100 text-blue-600
+                    @elseif ($order->shipping_status == 'preparing') bg-amber-100 text-amber-600
+                    @elseif ($order->shipping_status == 'Declined') bg-red-100 text-red-600 @endif">
                         {{ $order->shipping_status }}
                     </span>
+
                 </div>
                 <div class="mb-2">
                     <span class="font-semibold text-velvet">Shipping Method:</span>
@@ -256,19 +267,24 @@
                 </div>
                 <div class="mb-2 flex">
                     <span class="font-semibold text-velvet">Payment:</span>
-                    <span class="">
-
+                    <span>
                         @if ($order->payment_method == 'layaway')
                             <button onclick="viewLayawayPayments({{ $order->id }})"
                                 class="text-indigo-600 hover:text-indigo-800 font-semibold">
                                 {{ $order->payment_method }}
                             </button>
+                        @elseif ($order->payment_method == 'Cancelled')
+                            <span class="text-red-600 font-semibold">
+                                {{ $order->payment_method }}
+                            </span>
                         @else
-                            {{ $order->payment_method }}
+                            <span class="text-emerald-600 font-semibold">
+                                {{ $order->payment_method }}
+                            </span>
                         @endif
-
                     </span>
                 </div>
+
                 <div class="mt-4">
                     <button onclick="viewItems({{ $order->id }})"
                         class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-800 transition duration-300">
@@ -455,7 +471,17 @@
             <p class="text-lg font-semibold mb-2 text-gray-800">${paymentLabel} Date: ${dayjs(payment.payment_date).format('MMMM D, YYYY')}</p>
             <p class="text-md text-gray-600">Amount: ₱${Number(payment.amount).toFixed(2)}</p>
             <p class="text-md text-gray-600">Status: <span class="${statusColorClass}">${payment.status}</span></p>
-            `;
+        `;
+
+                    // Add a message below if the payment status is pending
+                    if (payment.status === 'Pending') {
+                        var message = document.createElement('p');
+                        message.classList.add('text-sm', 'text-red-600', 'mt-2');
+                        message.textContent =
+                            "Please note: The next payment amount may not be finalized until this payment is accepted.";
+                        listItem.appendChild(message);
+                    }
+
                     paymentList.appendChild(listItem);
                 });
 
@@ -469,7 +495,7 @@
             <p class="text-md text-gray-600">Amount: ₱${Number(payment.amount).toFixed(2)}</p>
             <p class="text-md text-gray-600">Date: ${dayjs(payment.payment_date).format('MMMM D, YYYY')}</p>
             <p class="text-md text-gray-600">Reason: ${payment.decline_reason || 'N/A'}</p>
-            `;
+        `;
                     paymentList.appendChild(listItem);
                 });
 
@@ -478,6 +504,7 @@
                 totalAmount = totalAmountInput;
                 totalPaymentsRequired = totalPaymentsRequiredInput;
             }
+
         }
 
 

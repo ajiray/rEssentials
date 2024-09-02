@@ -19,26 +19,33 @@ class AdminController extends Controller
     public function manageOrders()
 {
     // Fetch orders with payment_method 'fully paid'
-    $orders = Order::where('payment_method', 'fully paid')->orderBy('id', 'desc')->get();
+    $orders = Order::whereIn('payment_method', ['fully paid', 'Cancelled'])
+    ->orderBy('id', 'desc')
+    ->get();
+
     $totalOrdersCount = $orders->count();
 
     $newOrdersCount = $orders->where('shipping_status', 'preparing')->count();
     $pendingOrdersCount = $orders->where('shipping_status', 'shipped')->count();
     $deliveredOrdersCount = $orders->where('shipping_status', 'delivered')->count();
+    $declinedOrdersCount = $orders->where('shipping_status', 'Declined')->count();
 
     // Calculate the impressions
     $newOrdersImpression = $totalOrdersCount > 0 ? round(($newOrdersCount / $totalOrdersCount) * 100, 2) : 0;
     $pendingOrdersImpression = $totalOrdersCount > 0 ? round(($pendingOrdersCount / $totalOrdersCount) * 100, 2) : 0;
     $deliveredOrdersImpression = $totalOrdersCount > 0 ? round(($deliveredOrdersCount / $totalOrdersCount) * 100, 2) : 0;
+    $declinedOrdersImpression = $totalOrdersCount > 0 ? round(($declinedOrdersCount / $totalOrdersCount) * 100, 2) : 0;
 
     return view('admin.orders', [
         'orders' => $orders,
         'newOrdersCount' => $newOrdersCount,
         'pendingOrdersCount' => $pendingOrdersCount,
         'deliveredOrdersCount' => $deliveredOrdersCount,
+        'declinedOrdersCount' => $declinedOrdersCount,
         'newOrdersImpression' => $newOrdersImpression,
         'pendingOrdersImpression' => $pendingOrdersImpression,
         'deliveredOrdersImpression' => $deliveredOrdersImpression,
+        'declinedOrdersImpression' => $declinedOrdersImpression,
     ]);
 }
 
@@ -260,20 +267,21 @@ public function markAsFullyPaid(Order $order)
 public function cancelOrder(Order $order)
 {
     try {
-        // Restore product stock before deleting the order
+        // Restore product stock before updating the order status
         foreach ($order->items as $item) {
             $item->variant->increment('quantity', $item->quantity);
         }
 
-        // Delete the order
-        $order->delete();
+        // Update the order's shipping status to "Declined"
+        $order->shipping_status = 'Declined';
+        $order->payment_method = 'Cancelled';
+        $order->save();
 
-        return response()->json(['success' => true, 'message' => 'Order canceled successfully!']);
+        return response()->json(['success' => true, 'message' => 'Order declined and stock restored successfully!']);
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
     }
 }
-
 
 
 }

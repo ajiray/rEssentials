@@ -69,7 +69,7 @@
 
     <!-- Logo Section -->
     <div
-        class="lg:w-[50%] lg:h-[500px] hidden lg:flex justify-center items-center bg-gold rounded-tr-lg rounded-br-lg p-8 shadow-md">
+        class="lg:w-[50%] lg:h-[500px] hidden lg:flex justify-center items-center bg-gray-200 rounded-tr-lg rounded-br-lg p-8 shadow-md">
         <div class="mx-auto max-w-lg">
             <img src="{{ asset('images/logo.png') }}" alt="Logo" class="w-full h-auto">
         </div>

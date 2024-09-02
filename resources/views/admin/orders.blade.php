@@ -23,6 +23,11 @@
                         <p class="text-2xl">{{ $deliveredOrdersCount }}</p>
                         <p class="text-sm">{{ $deliveredOrdersImpression }}%</p>
                     </div>
+                    <div class="bg-red-100 text-red-800 p-4 rounded-lg shadow-md mb-4">
+                        <h2 class="text-xl font-bold">Declined Orders</h2>
+                        <p class="text-2xl">{{ $declinedOrdersCount }}</p>
+                        <p class="text-sm">{{ $declinedOrdersImpression }}%</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -44,6 +49,11 @@
                 <p class="text-2xl">{{ $deliveredOrdersCount }}</p>
                 <p class="text-sm">{{ $deliveredOrdersImpression }}%</p>
             </div>
+            <div class="bg-red-100 text-red-800 p-4 rounded-lg shadow-md flex-1 mx-2">
+                <h2 class="text-xl font-bold">Declined Orders</h2>
+                <p class="text-2xl">{{ $declinedOrdersCount }}</p>
+                <p class="text-sm">{{ $declinedOrdersImpression }}%</p>
+            </div>
         </div>
 
         <!-- Filter Buttons -->
@@ -60,6 +70,9 @@
             <button
                 class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full shadow-md hover:bg-blue-100 transition duration-300"
                 onclick="filterOrders('delivered')">Delivered Orders</button>
+            <button
+                class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full shadow-md hover:bg-blue-100 transition duration-300"
+                onclick="filterOrders('Declined')">Declined Orders</button>
         </div>
 
 
@@ -120,6 +133,7 @@
                         <th class="px-4 py-2 text-center text-sm font-semibold">Shipping Status</th>
                         <th class="px-4 py-2 text-center text-sm font-semibold">Contact</th>
                         <th class="px-4 py-2 text-center text-sm font-semibold">Receipt</th>
+
                     </tr>
                 </thead>
                 <tbody id="orderTableBody" class="text-gray-700">
@@ -168,15 +182,19 @@
                                 </td>
                                 <td class="px-4 py-2 text-center">{{ $order->shipping_procedure }}</td>
                                 <td
-                                    class="px-4 py-2 text-center {{ $order->shipping_status == 'delivered' ? 'text-emerald-600' : ($order->shipping_status == 'shipped' ? 'text-blue-600' : ($order->shipping_status == 'preparing' ? 'text-amber-600' : '')) }}">
+                                    class="px-4 py-2 text-center {{ $order->shipping_status == 'delivered' ? 'text-emerald-600' : ($order->shipping_status == 'shipped' ? 'text-blue-600' : ($order->shipping_status == 'preparing' ? 'text-amber-600' : ($order->shipping_status == 'Declined' ? 'text-red-600' : ''))) }}">
                                     <button onclick="getStatus({{ $order->id }})">Edit</button>
                                 </td>
+
                                 <td class="px-4 py-2 text-center">
                                     {{ $order->customer->email }}<br>{{ $order->customer->phone_number }}</td>
                                 <td class="px-4 py-2 text-center">
                                     <img src="{{ asset('storage/' . $order->receipt) }}" alt="Receipt"
                                         class="h-24 w-auto cursor-pointer"
                                         onclick="openReceiptModal('{{ asset('storage/' . $order->receipt) }}')">
+                                </td>
+
+
                                 </td>
                             </tr>
                         @endforeach
@@ -237,6 +255,9 @@
             </form>
         </div>
     </dialog>
+
+
+
 
     <dialog id="receipt_modal" class="modal">
         <div class="modal-box max-w-5xl">
@@ -327,9 +348,10 @@
                                         onclick="getItems(${order.id})">${order.num_orders}</button>
                                 </td>
                                 <td class="px-4 py-2 text-center">${order.shipping_procedure}</td>
-                                <td class="px-4 py-2 text-center ${order.shipping_status == 'delivered' ? 'text-emerald-600' : (order.shipping_status == 'shipped' ? 'text-blue-600' : (order.shipping_status == 'preparing' ? 'text-amber-600' : ''))}">
-                                    <button onclick="getStatus(${order.id})">Edit</button>
-                                </td>
+                               <td class="px-4 py-2 text-center ${order.shipping_status == 'delivered' ? 'text-emerald-600' : (order.shipping_status == 'shipped' ? 'text-blue-600' : (order.shipping_status == 'preparing' ? 'text-amber-600' : (order.shipping_status == 'Declined' ? 'text-red-600' : '')))}">
+    <button onclick="getStatus(${order.id})">Edit</button>
+</td>
+
                                 <td class="px-4 py-2 text-center">${order.customer.email}<br>${order.customer.phone_number}</td>
                                 <td class="px-4 py-2 text-center">
                                     <img src="{{ asset('storage/') }}/${order.receipt}" alt="Receipt" class="h-24 w-auto cursor-pointer"

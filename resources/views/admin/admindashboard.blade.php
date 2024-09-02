@@ -78,6 +78,10 @@
                     <p class="text-2xl text-green-500">{{ $totalItemsSold }}</p>
                 </div>
                 <div class="bg-white rounded-lg shadow-md p-6">
+                    <p class="font-semibold text-lg mb-2">Total Declined/Cancelled Orders:</p>
+                    <p class="text-2xl text-green-500">{{ $totalDeclined }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
                     <p class="font-semibold text-lg mb-2">Top Selling Products:</p>
                     <ul class="list-disc list-inside">
                         @foreach ($topSellingProducts as $transaction)
@@ -538,27 +542,27 @@
                             </div>
                             <img src="/storage/${payment.receipt}" alt="Receipt" class="w-24 h-24 cursor-pointer rounded-md object-cover lg:w-32 lg:h-32" onclick="showImageModal(this)">
                             ${payment.status === 'Pending' ? `
-                                                              <div class="flex flex-col space-y-3 items-center">
-                                <button class="btn btn-sm bg-emerald-500 ml-4" onclick="updatePaymentStatus(${payment.id}, ${orderId}, 'Accepted')">Accept Payment</button>
-                                <button class="btn btn-sm bg-red-500 ml-4" onclick="openDeclineReasonModal(${payment.id}, ${orderId})">Decline Payment</button>
-                            </div>
+                                                                          <div class="flex flex-col space-y-3 items-center">
+                                            <button class="btn btn-sm bg-emerald-500 ml-4" onclick="updatePaymentStatus(${payment.id}, ${orderId}, 'Accepted')">Accept Payment</button>
+                                            <button class="btn btn-sm bg-red-500 ml-4" onclick="openDeclineReasonModal(${payment.id}, ${orderId})">Decline Payment</button>
+                                        </div>
 
-                            <dialog id="decline_reason_modal" class="modal">
-                                <div class="modal-box w-11/12 max-w-md">
-                                    <h3 class="font-bold text-lg">Decline Payment</h3>
-                                    <p class="py-4">Please provide a reason for declining this payment:</p>
-                                    <input type="hidden" id="decline_payment_id">
-                                    <input type="hidden" id="decline_order_id">
-                                    <textarea id="decline_reason" class="textarea textarea-bordered w-full" placeholder="Enter reason..."></textarea>
-                                    <div class="modal-action">
-                                        <button class="btn" onclick="submitDeclineReason()">Submit</button>
-                                        <button class="btn" onclick="closeDeclineReasonModal()">Cancel</button>
-                                    </div>
-                                </div>
-                            </dialog>
+                                        <dialog id="decline_reason_modal" class="modal">
+                                            <div class="modal-box w-11/12 max-w-md">
+                                                <h3 class="font-bold text-lg">Decline Payment</h3>
+                                                <p class="py-4">Please provide a reason for declining this payment:</p>
+                                                <input type="hidden" id="decline_payment_id">
+                                                <input type="hidden" id="decline_order_id">
+                                                <textarea id="decline_reason" class="textarea textarea-bordered w-full" placeholder="Enter reason..."></textarea>
+                                                <div class="modal-action">
+                                                    <button class="btn" onclick="submitDeclineReason()">Submit</button>
+                                                    <button class="btn" onclick="closeDeclineReasonModal()">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </dialog>
 
 
-                                                            ` : ''}
+                                                                        ` : ''}
                         `;
                                 paymentsList.appendChild(listItem);
                             });

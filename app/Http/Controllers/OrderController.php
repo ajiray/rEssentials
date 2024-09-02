@@ -9,6 +9,8 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\LayawayPayment;
 use App\Models\ProductVariant;
+use App\Mail\OrderStatusUpdated;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -155,44 +157,48 @@ class OrderController extends Controller
     }
 
     public function updateStatus(Request $request, $orderId)
-    {
-        $order = Order::find($orderId);
-    
-        if ($order) {
-            // Check if the status is declined
-            if ($request->input('shipping_status') === 'declined') {
-                // Fetch all the transactions related to the order
-                $transactions = Transaction::where('order_id', $orderId)->get();
-    
-                foreach ($transactions as $transaction) {
-                    // Update the product_variant quantity by adding back the quantity from the transaction
-                    $productVariant = ProductVariant::find($transaction->variant_id);
-                    if ($productVariant) {
-                        $productVariant->quantity += $transaction->quantity;
-                        $productVariant->save();
-                    }
+{
+    $order = Order::find($orderId);
+
+    if ($order) {
+        // Check if the status is declined
+        if ($request->input('shipping_status') === 'declined') {
+            // Fetch all the transactions related to the order
+            $transactions = Transaction::where('order_id', $orderId)->get();
+        
+            foreach ($transactions as $transaction) {
+                // Update the product_variant quantity by adding back the quantity from the transaction
+                $productVariant = ProductVariant::find($transaction->variant_id);
+                if ($productVariant) {
+                    $productVariant->quantity += $transaction->quantity;
+                    $productVariant->save();
                 }
-    
-                // Delete the order from the orders table
-                $order->delete();
-    
-                // Optionally, delete the transactions related to this order
-                Transaction::where('order_id', $orderId)->delete();
-    
-                return response()->json(['success' => true, 'message' => 'Order declined and stock updated.']);
             }
-    
-            // For non-declined statuses, simply update the order details
-            $order->shipping_method = $request->input('shipping_method');
-            $order->tracking_number = $request->input('tracking_number');
-            $order->shipping_status = $request->input('shipping_status');
+        
+            // Update the shipping_status to 'declined' in the orders table
+            $order->shipping_status = 'Declined';
             $order->save();
-    
-            return response()->json(['success' => true, 'message' => 'Order status updated.']);
-        } else {
-            return response()->json(['success' => false, 'message' => 'Order not found']);
+
+            // Send the email notification to the customer
+            Mail::to($order->customer->email)->send(new OrderStatusUpdated($order));
+        
+            return response()->json(['success' => true, 'message' => 'Order declined, stock updated, and email sent to the customer.']);
         }
+
+        // For non-declined statuses, simply update the order details
+        $order->shipping_method = $request->input('shipping_method');
+        $order->tracking_number = $request->input('tracking_number');
+        $order->shipping_status = $request->input('shipping_status');
+        $order->save();
+
+        // Send the email notification to the customer
+        Mail::to($order->customer->email)->send(new OrderStatusUpdated($order));
+
+        return response()->json(['success' => true, 'message' => 'Order status updated and email sent to the customer.']);
+    } else {
+        return response()->json(['success' => false, 'message' => 'Order not found']);
     }
+}
     
 
 public function viewItems($orderId)
@@ -234,12 +240,12 @@ public function filterOrders($status)
 {
     if ($status == 'all') {
         $orders = Order::with('customer')
-            ->where('payment_method', 'fully paid')
+            ->whereIn('payment_method', ['fully paid', 'Cancelled'])
             ->orderBy('id', 'desc')
             ->get();
     } else {
         $orders = Order::with('customer')
-            ->where('payment_method', 'fully paid')
+            ->whereIn('payment_method', ['fully paid', 'Cancelled'])
             ->where('shipping_status', $status)
             ->orderBy('id', 'desc')
             ->get();
@@ -247,6 +253,7 @@ public function filterOrders($status)
 
     return response()->json($orders);
 }
+
 
 
     
