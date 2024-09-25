@@ -11,6 +11,8 @@ use App\Models\LayawayPayment;
 use App\Models\ProductVariant;
 use App\Mail\OrderStatusUpdated;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\RefundRequestMail;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -344,6 +346,54 @@ public function addLayawayPayment(Request $request)
 
 
 
+public function requestRefund(Request $request)
+{
+    $order = Order::findOrFail($request->order_id);
 
+    if ($order->shipping_status == 'delivered') {
+        // Save refund details in the database
+        $order->refund_status = 'requested';
+        $order->refund_reason = $request->input('refund_reason');
+        $order->refund_payment_method = $request->input('payment_method');
+        $order->refund_payment_details = $request->input('payment_details');
+        $order->save();
+
+        // Send email notification to the admin
+        try {
+            $adminEmail = env('MAIL_USERNAME');
+            Mail::to($adminEmail)->send(new RefundRequestMail($order));
+        } catch (\Exception $e) {
+            Log::error('Refund request email sending failed: ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    return response()->json(['success' => false, 'message' => 'Refund not available for this order.']);
+}
+
+public function processRefund(Request $request, $id)
+{
+    $validatedData = $request->validate([
+        'refund_receipt' => 'required|file|mimes:jpeg,png,jpg,gif,svg|max:5120',
+    ]);
+
+    $order = Order::findOrFail($id);
+
+    if (!$order) {
+        return redirect()->back()->with('error', 'Order not found.');
+    }
+
+    // Store the uploaded file in the "receipts" folder in the public disk
+    $receiptPath = $request->file('refund_receipt')->store('receipts', 'public');
+
+    // Update the order with the refund receipt path and update the refund status
+    $order->update([
+        'refund_receipt' => $receiptPath,
+        'refund_status' => 'processed',  // Update refund status to 'processed'
+    ]);
+
+    return redirect()->back()->with('success', 'Refund processed successfully.');
+}
 
 }

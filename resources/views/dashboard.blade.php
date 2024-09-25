@@ -95,7 +95,7 @@
                                        <div class="flex flex-col space-y-3 relative shadow-md p-3 rounded-md border-gray-100 border-2">
   <div class="w-full flex items-center space-x-4 lg:space-x-6 xl:space-x-8">
     <div class="w-24 h-24 overflow-hidden lg:w-32 lg:h-32 xl:w-40 xl:h-40">
-      <img src="/storage/${image}" alt="${product.name}" class="w-full h-full object-cover">
+      <img src="/storage/${image}" alt="${product.name}" class="w-full h-full object-contain">
     </div>
     <div class="text-sm lg:text-base xl:text-lg">
       <h3 class="font-semibold">${product.brand} ${product.name}</h3>

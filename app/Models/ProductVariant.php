@@ -58,4 +58,16 @@ class ProductVariant extends Model
             return false; // Not enough quantity available
         }
     }
+
+    // Method to remove variant from other customers' carts if the stock is zero
+    public function removeFromOtherCartsIfOutOfStock()
+    {
+        // Check if the quantity is 0
+        if ($this->quantity == 0) {
+            // Remove this product variant from all carts except the one who just bought it
+            CartItem::where('variant_id', $this->id)
+                    ->where('quantity', '>', 0)
+                    ->delete();
+        }
+    }
 }

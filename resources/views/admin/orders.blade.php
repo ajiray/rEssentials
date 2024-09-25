@@ -220,9 +220,10 @@
 
     <dialog id="status_modal" class="modal">
         <div class="modal-box">
-            <form id="updateOrderForm" method="dialog">
-                <button id="closeStatusModalButton"
-                    class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            <form id="updateOrderForm">
+                <!-- Set type to button to prevent form submission -->
+                <button type="button" id="closeStatusModalButton" 
+                        class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                 <h3 class="font-bold text-2xl text-center">Order Status</h3>
                 <div id="orderDetails" class="py-4">
                     <div class="mb-4">
@@ -246,7 +247,7 @@
                             <option value="delivered">Delivered</option>
                             <option value="declined">Declined</option>
                         </select>
-
+    
                         <x-input-error class="mt-2" :messages="$errors->get('shipping_status')" />
                     </div>
                     <button type="submit"
@@ -255,6 +256,13 @@
             </form>
         </div>
     </dialog>
+    
+    <script>
+        // Close the modal when "X" is clicked without submitting the form
+        document.getElementById('closeStatusModalButton').addEventListener('click', function() {
+            document.getElementById('status_modal').close();
+        });
+    </script>
 
 
 

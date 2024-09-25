@@ -65,7 +65,7 @@
                             <li class="flex items-center pb-4 mb-4 border-b border-gray-200 lg:pb-6 lg:mb-6">
                                 <img src="/storage/{{ $cartItem->variant->images->first()->path }}"
                                     alt="{{ $cartItem->product->name }}"
-                                    class="w-20 h-20 lg:w-32 lg:h-32 rounded-md object-cover mr-4 lg:mr-6">
+                                    class="w-20 h-20 lg:w-32 lg:h-32 rounded-md object-contain mr-4 lg:mr-6">
                                 <div>
                                     <h4 class="font-semibold text-gray-800 text-base lg:text-xl">
                                         {{ $cartItem->product->brand }} {{ $cartItem->product->name }}
@@ -103,14 +103,14 @@
                             <img src="{{ asset('images/gcash.png') }}" alt="GCash"
                                 class="w-40 h-52 lg:w-48 lg:h-60 mb-2 cursor-pointer transform hover:scale-105 transition-transform duration-200"
                                 onclick="showImageModal(this)">
-                            <label for="gcash" class="text-gray-800 text-sm lg:text-lg">GCash (09999999999)</label>
+                            <label for="gcash" class="text-gray-800 text-sm lg:text-lg text-center">GCash <br> 0927 307 5924</label>
                         </div>
                         <div class="flex flex-col items-center">
                             <img src="{{ asset('images/unionbank.png') }}" alt="UnionBank"
                                 class="w-40 h-52 lg:w-48 lg:h-60 mb-2 cursor-pointer transform hover:scale-105 transition-transform duration-200"
                                 onclick="showImageModal(this)">
-                            <label for="unionbank" class="text-gray-800 text-sm lg:text-lg">UnionBank
-                                (123123123123)</label>
+                            <label for="unionbank" class="text-gray-800 text-sm lg:text-lg text-center">BDO <br>
+                                0105 4014 3170 <br> Rhea Corazon Libunao</label>
                         </div>
                     </div>
 
@@ -157,9 +157,9 @@
                 <div id="imageModal"
                     class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden">
                     <div class="relative">
-                        <img id="modalImage" src="" alt="Modal Image" class="max-w-full max-h-full">
+                        <img id="modalImage" src="" alt="Modal Image" class="w-[400px] h-[500px]">
                         <button type="button"
-                            class="absolute top-0 right-2 text-white text-3xl bg-transparent border-none cursor-pointer"
+                            class="absolute top-0 right-6 text-slate-700 text-3xl bg-transparent border-none cursor-pointer"
                             onclick="closeImageModal()">✕</button>
                     </div>
                 </div>

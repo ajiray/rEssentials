@@ -148,6 +148,7 @@ Route::get('/admindashboard', function () {
     $averageInventory = ProductVariant::avg(DB::raw('price * quantity')); // Average inventory value
     $inventoryTurnoverRate = $averageInventory ? $costOfGoodsSold / $averageInventory : 0;
 
+
     // Pass the data to the view
     return view('admin.admindashboard', [
         'totalRevenue' => $totalRevenue,
@@ -170,6 +171,8 @@ Route::get('/admindashboard', function () {
         'inventoryTurnoverRate' => $inventoryTurnoverRate,
         'layawayOrders' => $layawayOrders, // Add this line
         'totalDeclined' => $totalDeclined,
+        'refundRequests' => Order::whereNotNull('refund_status')->with('customer')->orderBy('created_at', 'desc')->get()
+        
     ]);
 })->name('admindashboard');
 
@@ -229,6 +232,8 @@ Route::get('/cart/data', [CartController::class, 'getCartData'])->name('cart.dat
 Route::get('/cart/items', 'App\Http\Controllers\CartController@getItems')->name('cart.items');
 Route::post('/cart/delete', 'App\Http\Controllers\CartController@deleteItem')->name('cart.delete');
 Route::patch('/cart/checkout', [CartController::class, 'updateAndCheckout'])->name('cart.updateAndCheckout');
+Route::get('/cart/checkout', [CartController::class, 'showCheckout'])->name('cart.showCheckout');
+
 
 
 
@@ -248,6 +253,8 @@ Route::get('/filter-orders/{status}', [OrderController::class, 'filterOrders'])-
 Route::get('/orders/{id}', [OrderController::class, 'show']);
 Route::get('/layaway-payments/{order}', [OrderController::class, 'layawayPayments'])->name('layaway.payments');
 Route::post('/add-layaway-payment', [OrderController::class, 'addLayawayPayment']);
+Route::post('/request-refund', [OrderController::class, 'requestRefund'])->name('orders.requestRefund');
+Route::post('/process-refund/{id}', [OrderController::class, 'processRefund'])->name('process.refund');
 
 
 

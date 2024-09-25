@@ -99,6 +99,66 @@
         </div>
     </dialog>
 
+    <!-- Refund Request Modal -->
+<dialog id="refundModal" class="modal">
+    <div class="modal-box bg-white rounded-xl shadow-lg p-6 relative">
+        <form id="refundForm">
+            <button id="closeRefundModal" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+            <h3 class="font-bold text-2xl text-center mb-4 text-gray-800">Refund Request</h3>
+
+            <!-- Refund Reason -->
+            <div class="mb-4">
+                <label for="refundReason" class="block text-gray-800 text-lg mb-2">Reason for Refund</label>
+                <textarea id="refundReason" name="refund_reason" required
+                    class="w-full p-3 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    placeholder="Enter the reason for requesting a refund"></textarea>
+            </div>
+
+            <!-- Preferred Mode of Payment -->
+              <!-- Payment Details (e.g. Account number) -->
+            <div class="mb-4">
+                <label for="paymentMethod" class="block text-gray-800 text-lg mb-2">Payment Method</label>
+                <input type="text" id="paymentMethod" name="payment_method" required
+                    class="w-full p-3 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    placeholder="Gcash, BDO, Unionbank, etc." />
+            </div>
+
+            <!-- Payment Details (e.g. Account number) -->
+            <div class="mb-4">
+                <label for="paymentDetails" class="block text-gray-800 text-lg mb-2">Payment Details</label>
+                <input type="text" id="paymentDetails" name="payment_details" required
+                    class="w-full p-3 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    placeholder="Account number - Account name" />
+            </div>
+
+            <!-- Refund Information -->
+            <div class="bg-yellow-100 text-yellow-700 p-3 rounded-md shadow-md mb-6">
+                <p class="text-md">
+                    After submitting this request, the admin will review your refund. You will be notified once the decision is made.
+                </p>
+            </div>
+
+            <!-- Hidden Input for Order ID -->
+            <input type="hidden" id="refundOrderId" name="order_id" />
+
+            <!-- Submit Button -->
+            <button type="submit" 
+                class="w-full bg-red-600 text-white py-3 rounded-md shadow-lg hover:bg-red-700 transition duration-300 ease-in-out">
+                Submit Refund Request
+            </button>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="refundImageModal" class="modal">
+    <div class="modal-box bg-white rounded-md shadow-lg p-4">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <img id="refundImage" src="" alt="Refund Image" class="w-full h-auto">
+    </div>
+</dialog>
+
 
     <div class="py-12 hidden lg:block">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -152,6 +212,10 @@
                                             <th scope="col"
                                                 class="px-6 py-3 text-sm font-semibold uppercase tracking-widest">
                                                 Items
+                                            </th>
+                                            <th scope="col"
+                                                class="px-6 py-3 text-sm font-semibold uppercase tracking-widest">
+                                                Refund
                                             </th>
                                         </tr>
                                     </thead>
@@ -210,6 +274,23 @@
                                 <button onclick="viewItems({{ $order->id }})"
                                     class="text-indigo-600 hover:text-indigo-800 font-semibold">View
                                     Items</button>
+                            </td>
+                            <td>
+                                @if ($order->shipping_status == 'delivered')
+                                    @if ($order->refund_status == 'requested')
+                                        <p class="text-amber-600 font-semibold">Refund Requested</p>
+                                    @elseif ($order->refund_status == 'processed')
+                                        <button onclick="openRefundImage('{{ $order->refund_receipt }}')" 
+                                            class="text-emerald-600 hover:text-emerald-800 font-semibold">
+                                            Refunded
+                                        </button>
+                                    @else
+                                        <button onclick="requestRefund({{ $order->id }})" 
+                                            class="text-red-600 hover:text-red-800 font-semibold">
+                                            Request Refund
+                                        </button>
+                                    @endif
+                                @endif
                             </td>
                             </tr>
                             @endforeach
@@ -284,6 +365,24 @@
                         @endif
                     </span>
                 </div>
+                <div>
+                    <span class="font-semibold text-velvet">Refund:</span>
+                    @if ($order->shipping_status == 'delivered')
+                                    @if ($order->refund_status == 'requested')
+                                        <p class="text-amber-600 font-semibold">Refund Requested</p>
+                                    @elseif ($order->refund_status == 'processed')
+                                        <button onclick="openRefundImage('{{ $order->refund_receipt }}')" 
+                                            class="text-emerald-600 hover:text-emerald-800 font-semibold">
+                                            Refunded
+                                        </button>
+                                    @else
+                                        <button onclick="requestRefund({{ $order->id }})" 
+                                            class="text-red-600 hover:text-red-800 font-semibold">
+                                            Request Refund
+                                        </button>
+                                    @endif
+                                @endif
+                </div>
 
                 <div class="mt-4">
                     <button onclick="viewItems({{ $order->id }})"
@@ -291,6 +390,8 @@
                         View Items
                     </button>
                 </div>
+                
+           
             </div>
         @endforeach
     </div>
@@ -339,37 +440,48 @@
         }
 
         function populateItemList(items) {
-            var itemList = document.getElementById('itemList');
-            if (itemList) {
-                itemList.innerHTML = '';
-                items.forEach(item => {
-                    var listItem = document.createElement('li');
-                    listItem.classList.add('border', 'border-gray-200', 'rounded-md', 'p-4', 'mb-4', 'flex',
-                        'flex-col', 'bg-white', 'shadow-sm', 'lg:flex-row');
-                    var imageContainer = document.createElement('div');
-                    imageContainer.classList.add('w-full', 'flex', 'justify-center', 'mb-4', 'lg:w-1/3', 'lg:mb-0');
-                    var image = document.createElement('img');
-                    image.src = "{{ asset('storage/') }}/" + item.image_paths[0];
-                    image.alt = item.product_name;
-                    image.classList.add('h-auto', 'w-full', 'max-w-[300px]', 'rounded-md');
-                    imageContainer.appendChild(image);
-                    var detailsContainer = document.createElement('div');
-                    detailsContainer.classList.add('flex-1', 'text-center', 'lg:text-left', 'lg:pl-4');
-                    detailsContainer.innerHTML = `
-                <p class="text-xl font-semibold mb-2 text-gray-800">${item.product_name}</p>
-                <div class="grid grid-cols-2 gap-4 lg:grid-cols-1 lg:gap-2 text-gray-600">
-                    <div><strong class="block lg:inline-block">Brand:</strong> ${item.product_brand}</div>
-                    <div><strong class="block lg:inline-block">Size:</strong> ${item.size}</div>
-                    <div><strong class="block lg:inline-block">Color:</strong> ${item.color}</div>
-                    <div><strong class="block lg:inline-block">Quantity:</strong> ${item.quantity}</div>
+    var itemList = document.getElementById('itemList');
+    if (itemList) {
+        itemList.innerHTML = '';  // Clear existing items
+        items.forEach(item => {
+            var listItem = document.createElement('li');
+            listItem.classList.add('border', 'border-gray-200', 'rounded-lg', 'p-6', 'mb-6', 'flex', 'flex-col', 'lg:flex-row', 'bg-white', 'shadow-lg', 'hover:shadow-xl', 'transition-shadow', 'duration-300', 'ease-in-out');
+
+            // Image container
+            var imageContainer = document.createElement('div');
+            imageContainer.classList.add('w-full', 'flex', 'justify-center', 'mb-4', 'lg:w-1/3', 'lg:mb-0');
+
+            // Image element with fixed size
+            var image = document.createElement('img');
+            image.src = "{{ asset('storage/') }}/" + item.image_paths[0];
+            image.alt = item.product_name;
+            image.classList.add('h-48', 'w-48', 'object-contain', 'rounded-md', 'shadow-sm');  // Fixed size for image
+            imageContainer.appendChild(image);
+
+            // Details container
+            var detailsContainer = document.createElement('div');
+            detailsContainer.classList.add('flex-1', 'text-center', 'lg:text-left', 'lg:pl-6');
+
+            // Product info with improved typography and spacing
+            detailsContainer.innerHTML = `
+                <p class="text-2xl font-bold mb-2 text-gray-900">${item.product_name}</p>
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-1 lg:gap-3 text-gray-700">
+                    <div><span class="font-semibold">Brand:</span> ${item.product_brand}</div>
+                    <div><span class="font-semibold">Size:</span> ${item.size}</div>
+                    <div><span class="font-semibold">Color:</span> ${item.color}</div>
+                    <div><span class="font-semibold">Quantity:</span> ${item.quantity}</div>
                 </div>
             `;
-                    listItem.appendChild(imageContainer);
-                    listItem.appendChild(detailsContainer);
-                    itemList.appendChild(listItem);
-                });
-            }
-        }
+
+            // Append image and details to the list item
+            listItem.appendChild(imageContainer);
+            listItem.appendChild(detailsContainer);
+
+            // Add list item to the item list
+            itemList.appendChild(listItem);
+        });
+    }
+}
 
         function viewLayawayPayments(orderId) {
             fetch(`/layaway-payments/${orderId}`, {
@@ -674,6 +786,64 @@
                 modal.showModal();
             }
         }
+
+        // Show refund modal when the user clicks the refund button
+function requestRefund(orderId) {
+    var modal = document.getElementById('refundModal');
+    var refundOrderId = document.getElementById('refundOrderId');
+
+    refundOrderId.value = orderId;  // Set the order ID in the hidden input
+    modal.showModal();  // Show the modal
+}
+
+// Close the modal when the close button is clicked
+document.getElementById('closeRefundModal').addEventListener('click', function() {
+    var modal = document.getElementById('refundModal');
+    modal.close();
+});
+
+// Handle refund form submission
+document.getElementById('refundForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    var formData = new FormData(this);
+    
+    fetch('/request-refund', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Refund request submitted successfully!');
+            location.reload();  // Optionally reload the page to reflect the change
+        } else {
+            alert('There was an error submitting your refund request.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An unexpected error occurred.');
+    });
+});
+
+function openRefundImage(imageUrl) {
+    if (imageUrl) {
+        // Construct the full URL for the refund receipt image
+        var fullImageUrl = "{{ asset('storage/') }}/" + imageUrl;
+
+        // Open the image in a modal
+        var modal = document.getElementById('refundImageModal');
+        var modalImage = document.getElementById('refundImage');
+        modalImage.src = fullImageUrl;
+        modal.showModal();
+    } else {
+        alert('No refund image available.');
+    }
+}
     </script>
 
 

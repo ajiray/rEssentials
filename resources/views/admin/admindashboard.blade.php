@@ -34,6 +34,24 @@
                 @endif
             </div>
 
+          <!-- Refund Requests Button -->
+<div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-indigo-500 hover:bg-indigo-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
+onclick="document.getElementById('refund_requests_modal').showModal()">
+<i class="fa-solid fa-receipt text-4xl mb-2"></i>
+<p class="text-lg font-semibold">Refund Requests</p>
+
+<!-- Badge showing the count of refund requests with 'requested' status -->
+@php
+    $requestedRefundsCount = $refundRequests->where('refund_status', 'requested')->count();
+@endphp
+
+@if ($requestedRefundsCount > 0)
+    <span class="absolute top-0 right-0 transform translate-x-2 -translate-y-2 flex items-center justify-center w-8 h-8 text-lg font-bold leading-none text-white bg-red-700 rounded-full">
+        {{ $requestedRefundsCount }}
+    </span>
+@endif
+</div>
+
 
             <!-- Layaway Orders Button -->
             <div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-amber-500 hover:bg-amber-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
@@ -107,6 +125,82 @@
             </div>
         </div>
     </dialog>
+
+    <!-- Refund Requests Modal -->
+    <dialog id="refund_requests_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-5xl max-h-85vh p-10">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                onclick="document.getElementById('refund_requests_modal').close()">✕</button>
+            <h3 class="font-bold text-3xl text-center mb-6">Refund Requests</h3>
+    
+            <!-- Table for Refund Requests -->
+            <div id="refund_requests_content" class="grid grid-cols-1 gap-6">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr class="text-center">
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Refund Reason</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Details</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="refund_requests_body" class="bg-white divide-y divide-gray-200">
+                        <!-- Loop through refund requests -->
+                        @foreach ($refundRequests as $order)
+                            <tr class="text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $order->id }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $order->customer->name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $order->refund_reason }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ucfirst($order->refund_payment_method) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $order->refund_payment_details }}</td>
+                                
+                                <!-- Status with color change -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    @if ($order->refund_status == 'requested')
+                                        <span class="text-red-600 font-semibold">Requested</span>
+                                    @elseif ($order->refund_status == 'processed')
+                                        <span class="text-emerald-600 font-semibold">Processed</span>
+                                    @endif
+                                </td>
+                                
+                                <!-- Process Refund button (hidden if already processed) -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    @if ($order->refund_status == 'requested')
+                                        <button class="text-blue-600 hover:text-blue-800 font-semibold"
+                                            onclick="document.getElementById('refund_modal_{{ $order->id }}').showModal()">Process Refund</button>
+                                        
+                                        <!-- Refund Modal -->
+                                        <dialog id="refund_modal_{{ $order->id }}" class="modal">
+                                            <div class="modal-box">
+                                                <form method="POST" action="{{ route('process.refund', $order->id) }}" enctype="multipart/form-data">
+                                                    @csrf
+                                                    <h3 class="font-bold text-lg">Process Refund for Order #{{ $order->id }}</h3>
+                                                    <p class="py-4">Please upload the receipt for the refund.</p>
+    
+                                                    <input type="file" name="refund_receipt" accept="image/*" required
+                                                        class="file-input file-input-bordered w-full max-w-xs mb-4" />
+    
+                                                    <div class="modal-action">
+                                                        <button type="submit" class="btn btn-primary">Submit</button>
+                                                        <button type="button" class="btn" onclick="document.getElementById('refund_modal_{{ $order->id }}').close()">Cancel</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </dialog>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </dialog>
+
+
 
 
     <!-- Customer Report Modal -->

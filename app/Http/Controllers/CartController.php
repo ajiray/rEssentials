@@ -167,6 +167,34 @@ public function updateAndCheckout(Request $request) {
     ]);
 }
 
+public function showCheckout() {
+    // Get the user's cart items
+    $cartItems = CartItem::where('user_id', auth()->id())->get();
+
+    // Calculate the total amount
+    $totalAmount = $cartItems->sum(function ($cartItem) {
+        return $cartItem->variant->price * $cartItem->quantity;
+    });
+
+    // Get the user's address
+    $user = auth()->user();
+    $userAddress = [
+        'name' => $user->name,
+        'street_address' => $user->street_address,
+        'city' => $user->city,
+        'province' => $user->province,
+        'postal_code' => $user->postal_code,
+        'phone_number' => $user->phone_number,
+    ];
+
+    // Return the checkout view with cart items, total amount, and user address
+    return view('checkout', [
+        'cartItems' => $cartItems,
+        'totalAmount' => $totalAmount,
+        'userAddress' => $userAddress,
+    ]);
+}
+
 public function payment(Request $request) {
     // Validate the common request data
     $validatedData = $request->validate([
@@ -260,6 +288,13 @@ public function payment(Request $request) {
                 'quantity' => $cartItem->quantity,
                 'price' => $productVariant->price,
             ]);
+
+            // If the product variant is out of stock, remove it from all other customers' carts
+            if ($productVariant->quantity <= 0) {
+                CartItem::where('variant_id', $productVariant->id)
+                    ->where('user_id', '!=', auth()->id()) // Ensure it removes from other customers' carts
+                    ->delete();
+            }
         }
 
         // Commit the transaction
