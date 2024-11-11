@@ -11,6 +11,8 @@
         </div>
     @endif
 
+    
+
     <dialog id="my_modal_3" class="modal">
         <div
             class="modal-box bg-white rounded-none md:rounded-xl shadow-lg p-4 w-screen h-screen max-h-screen sm:max-h-screen md:h-auto md:max-h-[800px] md:w-screen md:max-w-xl lg:max-h-[800px] lg:max-w-2xl xl:max-w-3xl mx-auto relative overflow-y-auto">
@@ -163,17 +165,255 @@
     <div class="py-12 hidden lg:block">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="overflow-hidden sm:rounded-lg">
-                <div class="p-6 sm:px-20 border-b border-marble relative">
-                    <a href="{{ route('dashboard') }}"
-                        class="inline-flex items-center gap-1 text-velvet hover:text-blue-300 absolute top-10 left-5">
+                <div class="p-6 border-b border-marble relative flex items-center justify-between">
+                    <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-1 text-velvet hover:text-blue-300">
                         <i class="fa-solid fa-angles-left text-xl"></i>
                         <span>Home</span>
                     </a>
-
-                    <div class="text-5xl text-center text-velvet font-extrabold tracking-widest">
-                        Your Orders
+                
+                    <div class="flex-grow text-center">
+                        <div class="text-5xl text-velvet font-extrabold tracking-widest">
+                            Your Orders
+                        </div>
+                    </div>
+                
+                    <div class="text-right">
+                        <button onclick="openReservedOrdersModal()" class="bg-emerald-500 text-white px-2 py-2 rounded-md hover:bg-emerald-600 transition duration-300">
+                            View Reserved Orders
+                        </button>
                     </div>
                 </div>
+                
+                <!-- Modal for Reserved Orders -->
+                <dialog id="reservedOrdersModal" class="modal">
+                    <div class="modal-box bg-white w-[80%] h-[90%] min-w-[90%] rounded-xl shadow-lg p-6 relative mx-auto text-center">
+                        <form method="dialog" class="absolute top-2 right-2">
+                            <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                        </form>
+                        <h3 class="text-3xl font-bold text-gray-800 text-center mb-6">Reserved Orders</h3>
+                
+                        <!-- Reserved Orders Table -->
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white divide-y divide-gray-300 text-center">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Reservation ID</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Variant</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Down Payment</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                                        <th class="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200 text-gray-800">
+                                    @foreach ($reservedItems as $reservation)
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $reservation->id }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $reservation->created_at->format('F j, Y') }}</td>
+                                        
+
+                                            <!-- Status with color change -->
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                @if ($reservation->status == 'Pending')
+                                                    <span class="text-red-600 font-semibold">Pending</span>
+                                                @elseif ($reservation->status == 'Downpayment Accepted')
+                                                    <span class="text-emerald-600 font-semibold">Downpayment Accepted, Waiting for item to arrive in store</span>
+                                                @elseif ($reservation->status == 'Arrived at Store')
+                                                    <span class="text-blue-600 font-semibold">Arrived at Store</span>
+                                                @elseif ($reservation->status == 'Declined')
+                                                    <span class="text-red-600 font-semibold">Declined</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $reservation->product->name }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $reservation->variant->color }}, {{ $reservation->variant->size }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $reservation->quantity }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">₱{{ number_format($reservation->down_payment, 2) }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">₱{{ number_format($reservation->total_price, 2) }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <img src="{{ asset('storage/' . $reservation->product->variants->first()->images->first()->path) }}" 
+                                                     alt="{{ $reservation->product->name }}" 
+                                                     class="w-16 h-16 object-contain cursor-pointer" 
+                                                     onclick="enlargeImage(this)">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                @if ($reservation->status === 'Downpayment Accepted' || $reservation->status === 'Arrived at Store')
+                                                    <button onclick="openPaymentModal('{{ $reservation->id }}')" class="bg-emerald-500 text-white px-4 py-2 rounded-md hover:bg-emerald-600 transition duration-300">Make Payment</button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </dialog>
+                
+                
+              <!-- Modal for Making Additional Payment -->
+              <dialog id="paymentModal" class="modal">
+                <div class="modal-box bg-white w-[70%] min-w-[70%] rounded-xl shadow-lg p-6 relative mx-auto text-center">
+                    <form method="dialog" class="absolute top-2 right-2">
+                        <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                    </form>
+                    <h3 class="text-2xl font-bold text-gray-800 text-center mb-4">Make Additional Payment</h3>
+                    <form action="{{ route('uploadReceiptTwo') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="reservation_id" id="paymentReservationId" value="">
+                        
+                        <!-- Remaining Balance -->
+                        <div class="mb-4">
+                            <p class="text-lg font-medium text-gray-700">
+                                Remaining Balance: 
+                                <span id="remsBalance" class="text-red-600 font-semibold">₱0.00</span>
+                            </p>
+                        </div>
+            
+                        <!-- Payment Methods -->
+                        <div class="mb-4">
+                            <h4 class="text-lg font-medium text-gray-700 mb-2">Payment Methods</h4>
+                            <div class="flex justify-center space-x-20">
+                                <div class="flex flex-col items-center">
+                                    <img src="{{ asset('images/gcash.png') }}" alt="GCash"
+                                         class="w-60 h-96 cursor-pointer transform hover:scale-105 transition-transform duration-200">
+                                    <label class="text-gray-800 text-sm text-center">GCash</label>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <img src="{{ asset('images/unionbank.png') }}" alt="UnionBank"
+                                         class="w-60 h-96 cursor-pointer transform hover:scale-105 transition-transform duration-200">
+                                    <label class="text-gray-800 text-sm text-center">BDO Bank Transfer</label>
+                                </div>
+                            </div>
+                        </div>
+            
+                        <!-- Upload Receipt -->
+                        <div class="mb-4">
+                            <label for="paymentReceipt" class="block text-sm font-medium text-gray-700">Upload Payment Receipt</label>
+                            <input type="file" name="payment_receipt" id="paymentReceipt" accept="image/*" class="mt-1 block w-full text-gray-500 file:bg-blue-500 file:text-white file:px-4 file:py-2 file:rounded-md file:mr-4 file:cursor-pointer" required>
+                        </div>
+            
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="bg-emerald-500 text-white px-6 py-2 rounded-md hover:bg-emerald-600 transition duration-300">Submit Payment</button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+                
+                <script>
+
+function enlargeImage(imgElement) {
+    // Create a new dialog element for displaying the image
+    const dialog = document.createElement('dialog');
+    dialog.classList.add('modal');
+    dialog.style.display = 'block'; // Show the dialog
+
+    // Style the dialog to center the image on the screen using flexbox
+    dialog.style.position = 'fixed';
+    dialog.style.top = '0';
+    dialog.style.left = '0';
+    dialog.style.width = '100vw';
+    dialog.style.height = '100vh';
+    dialog.style.display = 'flex';
+    dialog.style.justifyContent = 'center';
+    dialog.style.alignItems = 'center';
+    dialog.style.background = 'rgba(0, 0, 0, 0.8)'; // Semi-transparent background
+    dialog.style.margin = '0';
+    dialog.style.padding = '0';
+    dialog.style.border = 'none';
+
+    // Create an image element with the same source as the clicked image
+    const largeImg = document.createElement('img');
+    largeImg.src = imgElement.src;
+    largeImg.alt = imgElement.alt;
+    largeImg.style.width = '80%'; // Fixed size for the image (adjust as needed)
+    largeImg.style.height = 'auto';
+    largeImg.style.maxWidth = '600px'; // Set a max width for the image
+    largeImg.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)'; // Add a shadow for better visibility
+
+    // Append the image to the dialog
+    dialog.appendChild(largeImg);
+
+    // Add a close button to the dialog
+    const closeButton = document.createElement('button');
+    closeButton.classList.add('btn', 'btn-sm', 'btn-circle', 'btn-ghost', 'text-white');
+    closeButton.textContent = '✕';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '30px';
+    closeButton.style.right = '30px';
+    closeButton.onclick = () => dialog.close();
+
+    // Append the close button to the dialog
+    dialog.appendChild(closeButton);
+
+    // Append the dialog to the body and show it
+    document.body.appendChild(dialog);
+    dialog.showModal();
+
+    // Remove the dialog when it is closed
+    dialog.addEventListener('close', () => {
+        document.body.removeChild(dialog);
+    });
+}
+                   
+                
+function openPaymentModal(reservationId) {
+    const modal = document.getElementById('paymentModal');
+    const paymentReservationId = document.getElementById('paymentReservationId');
+    const remsBalanceElement = document.getElementById('remsBalance');
+
+    if (modal && paymentReservationId && remsBalanceElement) {
+        paymentReservationId.value = reservationId;
+
+        // Fetch the reservation data to get the remaining balance
+        fetch(`/get-reservation-details/${reservationId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data); // Log the full response for debugging
+            if (data.success) {
+                // Format the remaining balance as a currency value
+                const formattedBalance = `₱${Number(data.remainingBalance).toLocaleString('en-PH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+
+                // Update the text content of the span with id "remsBalance"
+                remsBalanceElement.textContent = formattedBalance;
+
+                // Open the modal
+                modal.showModal();
+            } else {
+                alert('Failed to fetch reservation details. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching reservation details:', error);
+            alert('An error occurred while fetching the reservation details.');
+        });
+    }
+}
+
+function openReservedOrdersModal() {
+                        var modal = document.getElementById('reservedOrdersModal');
+                        if (modal) {
+                            modal.showModal();
+                        }
+                    }
+                </script>
 
                 <!-- Table -->
                 <div class="flex flex-col">

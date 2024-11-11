@@ -15,6 +15,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Models\ReservedItem;
+use Illuminate\Support\Facades\Mail;
 
 
 //index
@@ -126,6 +128,9 @@ Route::get('/admindashboard', function () {
 
     $customerRetentionRate = $totalCustomers ? ($repeatCustomers / $totalCustomers) * 100 : 0;
 
+    // Use the 'user' relationship instead of 'customer'
+$reservedItems = ReservedItem::with('user')->orderBy('created_at', 'desc')->get();
+
     // Inventory Data
     $totalProducts = ProductVariant::count();
     $productsInStock = ProductVariant::where('quantity', '>', 0)->count();
@@ -137,6 +142,11 @@ Route::get('/admindashboard', function () {
     ->orderBy('total_quantity')
     ->with('product')
     ->get();
+
+    // Upcoming Products Data
+$upcomingProducts = Product::where('is_upcoming', 1)
+->orderBy('created_at', 'desc')
+->get();
 
 
     $productsByCategory = Product::select('category', DB::raw('COUNT(*) as total_products'))
@@ -171,7 +181,9 @@ Route::get('/admindashboard', function () {
         'inventoryTurnoverRate' => $inventoryTurnoverRate,
         'layawayOrders' => $layawayOrders, // Add this line
         'totalDeclined' => $totalDeclined,
-        'refundRequests' => Order::whereNotNull('refund_status')->with('customer')->orderBy('created_at', 'desc')->get()
+        'refundRequests' => Order::whereNotNull('refund_status')->with('customer')->orderBy('created_at', 'desc')->get(),
+        'reservedItems' => $reservedItems,
+        'upcomingProducts' => $upcomingProducts,
         
     ]);
 })->name('admindashboard');
@@ -212,8 +224,14 @@ Route::get('/orders', function () {
     // Retrieve orders associated with the currently authenticated user
     $orders = Order::where('customer_id', Auth::id())->orderBy('id', 'desc')->get();
 
-    // Pass the orders data to the view
-    return view('orders', ['orders' => $orders]);
+    // Retrieve reserved items associated with the currently authenticated user
+    $reservedItems = ReservedItem::where('user_id', Auth::id())->orderBy('id', 'desc')->get();
+
+    // Pass the orders and reserved items data to the view
+    return view('orders', [
+        'orders' => $orders,
+        'reservedItems' => $reservedItems,
+    ]);
 })->name('checkOrders');
 
 
@@ -233,10 +251,6 @@ Route::get('/cart/items', 'App\Http\Controllers\CartController@getItems')->name(
 Route::post('/cart/delete', 'App\Http\Controllers\CartController@deleteItem')->name('cart.delete');
 Route::patch('/cart/checkout', [CartController::class, 'updateAndCheckout'])->name('cart.updateAndCheckout');
 Route::get('/cart/checkout', [CartController::class, 'showCheckout'])->name('cart.showCheckout');
-
-
-
-
 
 
 
@@ -263,17 +277,22 @@ Route::post('/admin/update-payment-status', [AdminController::class, 'updatePaym
 
 Route::post('/admin/mark-as-fully-paid/{order}', [AdminController::class, 'markAsFullyPaid']);
 Route::post('/admin/cancel-order/{order}', [AdminController::class, 'cancelOrder']);
-
-
+Route::patch('/admin/reservation/review/{id}', [AdminController::class, 'reviewReservation'])->name('admin.reservation.review');
+Route::patch('/admin/products/{id}/arrived', [AdminController::class, 'markAsArrived'])->name('admin.products.arrived');
+Route::patch('/admin/products/arrived-all', [AdminController::class, 'markAllAsArrived'])->name('admin.products.arrived-all');
 
 
 // In your web.php or api.php routes file
 Route::get('/waybill/{orderId}', [AdminController::class, 'getWaybillDetails']);
 
+Route::get('/upcoming', [ProductController::class, 'upcoming'])->name('upcoming');
 
 
+Route::post('/reserve-item', [ProductController::class, 'reserveItem'])->name('reserveItem');
 
+Route::get('/get-reservation-details/{reservationId}', [ProductController::class, 'getReservationDetails']);
 
+Route::post('/upload-receipt-two', [ProductController::class, 'uploadReceiptTwo'])->name('uploadReceiptTwo');
 
 
 

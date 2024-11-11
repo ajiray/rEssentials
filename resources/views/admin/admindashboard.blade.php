@@ -52,6 +52,29 @@ onclick="document.getElementById('refund_requests_modal').showModal()">
 @endif
 </div>
 
+<div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-teal-500 hover:bg-teal-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
+    onclick="document.getElementById('reserved_items_modal').showModal()">
+    <i class="fa-solid fa-box-open text-4xl mb-2"></i>
+    <p class="text-lg font-semibold">Reserved Items</p>
+
+    <!-- Badge for Reserved Items Count -->
+    @php
+        $pendingReservationsCount = $reservedItems->where('status', 'Pending')->count();
+    @endphp
+
+    @if ($pendingReservationsCount > 0)
+        <span class="absolute top-0 right-0 transform translate-x-2 -translate-y-2 flex items-center justify-center w-8 h-8 text-lg font-bold leading-none text-white bg-red-700 rounded-full">
+            {{ $pendingReservationsCount }}
+        </span>
+    @endif
+</div>
+
+<div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-blue-500 hover:bg-blue-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
+     onclick="document.getElementById('upcoming_products_modal').showModal()">
+    <i class="fa-solid fa-boxes text-4xl mb-2"></i>
+    <p class="text-lg font-semibold">Upcoming Products</p>
+</div>
+
 
             <!-- Layaway Orders Button -->
             <div class="relative flex justify-center items-center flex-col p-6 rounded-lg bg-amber-500 hover:bg-amber-600 cursor-pointer text-white transition duration-300 ease-in-out transform hover:scale-105"
@@ -70,6 +93,41 @@ onclick="document.getElementById('refund_requests_modal').showModal()">
 
         </div>
     </div>
+
+    <dialog id="upcoming_products_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-5xl h-[80vh] p-10">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                onclick="document.getElementById('upcoming_products_modal').close()">✕</button>
+            <h3 class="font-bold text-3xl text-center mb-6">Upcoming Products</h3>
+    
+            <div class="flex justify-between mb-4">
+                <button class="btn btn-primary" onclick="markAllAsArrived()">Mark All as Arrived</button>
+            </div>
+    
+            <div id="upcoming_products_content" class="grid grid-cols-1 gap-6">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr class="text-center">
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                            <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcoming_products_body" class="bg-white divide-y divide-gray-200">
+                        @foreach ($upcomingProducts as $product)
+                            <tr class="text-center">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $product->name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $product->brand }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button class="btn btn-success" onclick="markAsArrived({{ $product->id }})">Arrived</button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </dialog>
 
     <!-- Sales Report Modal -->
     <dialog id="sales_report_modal" class="modal">
@@ -125,6 +183,95 @@ onclick="document.getElementById('refund_requests_modal').showModal()">
             </div>
         </div>
     </dialog>
+
+   <!-- Reserved Items Modal -->
+<dialog id="reserved_items_modal" class="modal">
+    <div class="modal-box w-11/12 max-w-5xl h-[80vh] p-10">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            onclick="document.getElementById('reserved_items_modal').close()">✕</button>
+        <h3 class="font-bold text-3xl text-center mb-6">Reserved Items</h3>
+
+        <div id="reserved_items_content" class="grid grid-cols-1 gap-6">
+            <!-- Reserved Items List -->
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr class="text-center">
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation ID</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Variant</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Down Payment</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reserved_items_body" class="bg-white divide-y divide-gray-200">
+                    <!-- Loop through reserved items -->
+                    @foreach ($reservedItems as $item)
+                        <tr class="text-center">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $item->id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $item->user->name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $item->product->brand }} {{ $item->product->name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $item->variant->color }} - {{ $item->variant->size }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱{{ number_format($item->down_payment, 2) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱{{ number_format($item->total_price, 2) }}</td>
+
+                            <!-- Status with color change -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                @if ($item->status == 'Pending')
+                                    <span class="text-red-600 font-semibold">Pending</span>
+                                @elseif ($item->status == 'Downpayment Accepted')
+                                    <span class="text-emerald-600 font-semibold">Downpayment Accepted, Waiting for item to arrive in store</span>
+                                @elseif ($item->status == 'Declined')
+                                    <span class="text-red-600 font-semibold">Declined</span>
+                                @endif
+                            </td>
+                            
+                            <!-- Accept/Decline buttons -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                @if ($item->status == 'Pending')
+                                    <button class="text-blue-600 hover:text-blue-800 font-semibold"
+                                        onclick="openReservationReviewModal('{{ $item->id }}')">Review</button>
+                                    
+                                    <!-- Reservation Review Modal -->
+                                    <dialog id="reservation_review_modal_{{ $item->id }}" class="modal">
+                                        <div class="modal-box">
+                                            <form method="POST" action="{{ route('admin.reservation.review', $item->id) }}" enctype="multipart/form-data">
+                                                @csrf
+                                                @method('PATCH')
+                                                <h3 class="font-bold text-lg">Review Reservation #{{ $item->id }}</h3>
+                                                <p class="py-4">Please review the receipts for the reservation.</p>
+
+                                                <!-- Display receipts -->
+                                                <img src="/storage/{{ $item->receipt }}" alt="Receipt" class="w-full h-auto mb-4">
+                                                @if ($item->receipt_two)
+                                                    <img src="/storage/{{ $item->receipt_two }}" alt="Additional Receipt" class="w-full h-auto mb-4">
+                                                @endif
+
+                                                <div class="modal-action">
+                                                    <button type="submit" name="action" value="accept" class="btn btn-primary">Accept</button>
+                                                    <button type="submit" name="action" value="decline" class="btn btn-secondary">Decline</button>
+                                                    <button type="button" class="btn" onclick="document.getElementById('reservation_review_modal_{{ $item->id }}').close()">Cancel</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </dialog>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    function openReservationReviewModal(reservationId) {
+        document.getElementById('reservation_review_modal_' + reservationId).showModal();
+    }
+</script>
 
     <!-- Refund Requests Modal -->
     <dialog id="refund_requests_modal" class="modal">
@@ -740,6 +887,64 @@ onclick="document.getElementById('refund_requests_modal').showModal()">
 
             return nextDueDate;
         }
+
+        function markAsArrived(productId) {
+    fetch(`/admin/products/${productId}/arrived`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // If the response is not ok, throw an error to catch below
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message); // Show success message
+            location.reload(); // Reload the page to reflect changes
+        } else {
+            // If the server responded with a success: false, handle the error message
+            console.error('Error marking product as arrived:', data.message);
+            alert('Failed to mark the product as arrived.');
+        }
+    })
+    .catch(error => {
+        // Log and handle any errors encountered during the request
+        console.error('Error marking product as arrived:', error);
+    });
+}
+
+function markAllAsArrived() {
+    fetch('/admin/products/arrived-all', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload(); // Reload the page to reflect changes
+        } else {
+            alert('Error marking all products as arrived.');
+        }
+    })
+    .catch(error => {
+        console.error('Error marking all products as arrived:', error);
+    });
+}
 
 
 

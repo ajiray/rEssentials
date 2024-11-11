@@ -3,15 +3,12 @@
         <a href="#"><img src="{{ asset('images/logo.png') }}" alt="Logo" class="w-20"></a>
     </div>
     <div class="hidden md:flex space-x-5 items-center justify-center">
-        <a href="https://instagram.com" target="_blank" class="text-pink-600 hover:text-pink-700">
-            <i class="fa-brands fa-instagram text-3xl"></i>
-        </a>
         <a href="https://www.facebook.com/profile.php?id=61554777501734" target="_blank"
             class="text-blue-600 hover:text-blue-700">
             <i class="fa-brands fa-facebook text-3xl"></i>
         </a>
-        <a href="https://viber.com" target="_blank" class="text-purple-600 hover:text-purple-700">
-            <i class="fa-brands fa-viber text-3xl"></i>
+        <a href="https://www.tiktok.com/@brheesclothingbou?lang=en" target="_blank" class="text-black hover:text-gray-800">
+            <i class="fa-brands fa-tiktok text-3xl"></i>
         </a>
     </div>
     <div class="hidden md:flex items-center">

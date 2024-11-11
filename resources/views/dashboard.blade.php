@@ -62,87 +62,82 @@
 
                 // Function to update cart items
                 function updateCartItems(cartItems) {
-                    const cartItemsContainer = document.getElementById('cartItemsContainer');
-                    const checkoutButton = document.getElementById('checkoutButton'); // Select the checkout button by its ID
-                    const subtotalSection = document.getElementById('subtotalSection');
-                    const subtotalSeparator = document.getElementById('subtotalSeparator');
+    const cartItemsContainer = document.getElementById('cartItemsContainer');
+    const checkoutButton = document.getElementById('checkoutButton');
+    const subtotalSection = document.getElementById('subtotalSection');
+    const subtotalSeparator = document.getElementById('subtotalSeparator');
 
-                    if (cartItemsContainer) {
-                        cartItemsContainer.innerHTML = ''; // Clear previous items
+    if (cartItemsContainer) {
+        cartItemsContainer.innerHTML = ''; // Clear previous items
 
-                        if (cartItems.length === 0) {
-                            cartItemsContainer.innerHTML = '<p class="text-center text-gray-600">No item in the cart.</p>';
-                            if (checkoutButton) {
-                                checkoutButton.style.display = 'none'; // Hide the checkout button
-                            }
-                            if (subtotalSection) {
-                                subtotalSection.style.display = 'none'; // Hide subtotal section
-                            }
-                            if (subtotalSeparator) {
-                                subtotalSeparator.style.display = 'none'; // Hide the horizontal line
-                            }
-                        } else {
-                            cartItems.forEach(cartItem => {
-                                const itemDiv = document.createElement('div');
-                                // Access the related data
-                                const variant = cartItem.variant;
-                                const product = variant && variant.product; // Check if variant has a product
-                                const image = variant && variant.images && variant.images.length > 0 ? variant.images[0]
-                                    .path : '';
+        if (cartItems.length === 0) {
+            cartItemsContainer.innerHTML = '<p class="text-center text-gray-600">No item in the cart.</p>';
+            if (checkoutButton) {
+                checkoutButton.style.display = 'none'; // Hide the checkout button
+            }
+            if (subtotalSection) {
+                subtotalSection.style.display = 'none'; // Hide subtotal section
+            }
+            if (subtotalSeparator) {
+                subtotalSeparator.style.display = 'none'; // Hide the horizontal line
+            }
+        } else {
+            cartItems.forEach(cartItem => {
+                const itemDiv = document.createElement('div');
+                // Access the related data
+                const variant = cartItem.variant;
+                const product = variant && variant.product;
+                const image = variant && variant.images && variant.images.length > 0 ? variant.images[0].path : '';
 
-                                if (product) {
-                                    itemDiv.innerHTML = `
-                                       <div class="flex flex-col space-y-3 relative shadow-md p-3 rounded-md border-gray-100 border-2">
-  <div class="w-full flex items-center space-x-4 lg:space-x-6 xl:space-x-8">
-    <div class="w-24 h-24 overflow-hidden lg:w-32 lg:h-32 xl:w-40 xl:h-40">
-      <img src="/storage/${image}" alt="${product.name}" class="w-full h-full object-contain">
-    </div>
-    <div class="text-sm lg:text-base xl:text-lg">
-      <h3 class="font-semibold">${product.brand} ${product.name}</h3>
-      <h3 class="text-gray-600"><b>Stocks:</b> ${variant.quantity}</h3>
-      <h3 class="text-gray-600"><b>Color:</b> ${variant.color}</h3>
-      <h3 class="text-gray-600"><b>Size:</b> ${variant.size}</h3>
-      <p class="text-gray-600"><b>Price:</b> ₱${Math.floor(variant.price).toLocaleString()}</p>
-    </div>
-  </div>
-  <div class="w-full flex justify-between items-center mt-2 lg:mt-4 xl:mt-6">
-    <input type="hidden" name="cart_id[]" value="${cartItem.id}">
-    <div class="flex items-center space-x-2">
-      <label for="quantity_${variant.id}" class="block text-gray-600">Quantity:</label>
-      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="decrementQuantity(${variant.id}, ${variant.quantity})">
-        -
-      </button>
-      <input type="number" id="quantity_${variant.id}" name="quantity[]" value="1" class="w-16 border rounded-md text-center" min="1" max="${variant.quantity}" oninput="updateMaxQuantity(this, ${variant.quantity})" required>
-      <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="incrementQuantity(${variant.id}, ${variant.quantity})">
-        +
-      </button>
-    </div>
-    <a class="absolute text-sm top-0 right-0 text-white bg-red-500 hover:bg-red-600 rounded-full px-1 cursor-pointer shadow-md transition duration-300 ease-in-out transform hover:scale-110"
-       onclick="deleteCartItem(${cartItem.id})">
-      <i class="fa-solid fa-minus text-sm"></i>
-    </a>
-  </div>
-</div>
-
-                                    `;
-                                    cartItemsContainer.appendChild(itemDiv);
-                                } else {
-                                    console.error('Product not found for variant:', variant);
-                                }
-                            });
-
-                            if (subtotalSection) {
-                                subtotalSection.style.display = 'block'; // Show subtotal section
-                            }
-                            if (subtotalSeparator) {
-                                subtotalSeparator.style.display = 'block'; // Show the horizontal line
-                            }
-                            if (checkoutButton) {
-                                checkoutButton.style.display = 'block'; // Show the checkout button
-                            }
-                        }
-                    }
+                if (product) {
+                    // Use the cartItem.quantity to set the current quantity
+                    itemDiv.innerHTML = `
+                        <div class="flex flex-col space-y-3 relative shadow-md p-3 rounded-md border-gray-100 border-2">
+                            <div class="w-full flex items-center space-x-4 lg:space-x-6 xl:space-x-8">
+                                <div class="w-24 h-24 overflow-hidden lg:w-32 lg:h-32 xl:w-40 xl:h-40">
+                                    <img src="/storage/${image}" alt="${product.name}" class="w-full h-full object-contain">
+                                </div>
+                                <div class="text-sm lg:text-base xl:text-lg">
+                                    <h3 class="font-semibold">${product.brand} ${product.name}</h3>
+                                    <h3 class="text-gray-600"><b>Stocks:</b> ${variant.quantity}</h3>
+                                    <h3 class="text-gray-600"><b>Color:</b> ${variant.color}</h3>
+                                    <h3 class="text-gray-600"><b>Size:</b> ${variant.size}</h3>
+                                    <p class="text-gray-600"><b>Price:</b> ₱${Math.floor(variant.price).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <div class="w-full flex justify-between items-center mt-2 lg:mt-4 xl:mt-6">
+                                <input type="hidden" name="cart_id[]" value="${cartItem.id}">
+                                <div class="flex items-center space-x-2">
+                                    <label for="quantity_${variant.id}" class="block text-gray-600">Quantity:</label>
+                                    <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="decrementQuantity(${variant.id}, ${variant.quantity})">-</button>
+                                    <!-- Set the initial value of the quantity input to cartItem.quantity -->
+                                    <input type="number" id="quantity_${variant.id}" name="quantity[]" value="${cartItem.quantity}" class="w-16 border rounded-md text-center" min="1" max="${variant.quantity}" oninput="updateMaxQuantity(this, ${variant.quantity})" required>
+                                    <button type="button" class="text-white bg-gray-400 rounded-full w-6 h-6 flex items-center justify-center lg:w-6 lg:h-6 xl:w-8 xl:h-8" onclick="incrementQuantity(${variant.id}, ${variant.quantity})">+</button>
+                                </div>
+                                <a class="absolute text-sm top-0 right-0 text-white bg-red-500 hover:bg-red-600 rounded-full px-1 cursor-pointer shadow-md transition duration-300 ease-in-out transform hover:scale-110" onclick="deleteCartItem(${cartItem.id})">
+                                    <i class="fa-solid fa-minus text-sm"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(itemDiv);
+                } else {
+                    console.error('Product not found for variant:', variant);
                 }
+            });
+
+            if (subtotalSection) {
+                subtotalSection.style.display = 'block'; // Show subtotal section
+            }
+            if (subtotalSeparator) {
+                subtotalSeparator.style.display = 'block'; // Show the horizontal line
+            }
+            if (checkoutButton) {
+                checkoutButton.style.display = 'block'; // Show the checkout button
+            }
+        }
+    }
+}
 
                 // Fetch cart items function
                 function fetchCartItems() {
@@ -234,6 +229,8 @@
     </section>
 
     <section class="second-section w-full h-auto min-h-full">
+
+      
         <div>
             <x-shop :products="$products" />
         </div>

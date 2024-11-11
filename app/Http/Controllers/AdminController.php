@@ -7,10 +7,13 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Models\LayawayPayment;
+use App\Models\ReservedItem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ReservedItemArrived;
 
 
 class AdminController extends Controller
@@ -283,5 +286,77 @@ public function cancelOrder(Order $order)
     }
 }
 
+public function reviewReservation(Request $request, $id)
+{
+    $reservation = ReservedItem::findOrFail($id);
+    
+    $action = $request->input('action');
+    if ($action === 'accept') {
+        $reservation->status = 'Downpayment Accepted';
+    } elseif ($action === 'decline') {
+        $reservation->status = 'Declined';
 
+        // Update the quantity of the variant for the declined reservation
+        $variant = $reservation->variant;
+        $variant->quantity += $reservation->quantity;
+        $variant->save();
+    }
+    
+    $reservation->save();
+
+    return redirect()->back()->with('success', 'Reservation status updated successfully!');
+}
+public function markAsArrived($id)
+{
+    $product = Product::findOrFail($id);
+    $product->is_upcoming = 0;
+    $product->save();
+
+    // Get all reserved items associated with this product
+    $reservedItems = ReservedItem::where('product_id', $id)->get();
+
+    foreach ($reservedItems as $reservedItem) {
+        // Skip updating if the status is "Declined"
+        if ($reservedItem->status === 'Declined') {
+            continue;
+        }
+
+        // Update the status to "Arrived at Store"
+        $reservedItem->status = 'Arrived at Store';
+        $reservedItem->save();
+
+        // Send email notification to the user
+        Mail::to($reservedItem->user->email)->send(new ReservedItemArrived($reservedItem));
+    }
+
+    return response()->json(['success' => true, 'message' => 'Product marked as arrived, and notifications sent to users.']);
+}
+
+public function markAllAsArrived()
+{
+    $products = Product::where('is_upcoming', 1)->get();
+    $products->each(function ($product) {
+        $product->is_upcoming = 0;
+        $product->save();
+
+        // Get all reserved items associated with this product
+        $reservedItems = ReservedItem::where('product_id', $product->id)->get();
+
+        foreach ($reservedItems as $reservedItem) {
+            // Skip updating if the status is "Declined"
+            if ($reservedItem->status === 'Declined') {
+                continue;
+            }
+
+            // Update the status to "Arrived at Store"
+            $reservedItem->status = 'Arrived at Store';
+            $reservedItem->save();
+
+            // Send email notification to the user
+            Mail::to($reservedItem->user->email)->send(new ReservedItemArrived($reservedItem));
+        }
+    });
+
+    return response()->json(['success' => true, 'message' => 'All upcoming products marked as arrived, and notifications sent to users.']);
+}
 }

@@ -15,6 +15,7 @@ class Product extends Model
         'description',
         'quantity',
         'category',
+        'is_upcoming',
     ];
 
     public function cartItems()

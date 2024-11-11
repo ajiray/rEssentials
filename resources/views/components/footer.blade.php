@@ -14,32 +14,25 @@
             <!-- Contact Info -->
             <div class="mb-6 md:mb-0">
                 <h5 class="uppercase font-bold mb-4">Contact Us</h5>
-                <p class="mb-2">123 E-commerce St.</p>
-                <p class="mb-2">City, State 12345</p>
-                <p class="mb-2">Email: info@example.com</p>
-                <p>Phone: (123) 456-7890</p>
+                <p class="mb-2">Cavite</p>
+                <p class="mb-2">Bacoor, Molino V</p>
+                <p class="mb-2">Email: brhee0214@gmail.com</p>
+                <p>Phone: (0927) 307 5924</p>
             </div>
             <!-- Social Media -->
             <div class="flex space-x-4">
-                <a href="#" class="text-gray-200 hover:text-gray-400">
+                <a href="https://www.facebook.com/profile.php?id=61554777501734" target="_blank" class="text-gray-200 hover:text-gray-400">
                     <i class="fab fa-facebook-f"></i>
                 </a>
-                <a href="#" class="text-gray-200 hover:text-gray-400">
-                    <i class="fab fa-twitter"></i>
-                </a>
-                <a href="#" class="text-gray-200 hover:text-gray-400">
-                    <i class="fab fa-instagram"></i>
-                </a>
-                <a href="#" class="text-gray-200 hover:text-gray-400">
-                    <i class="fab fa-linkedin-in"></i>
+                <a href="https://www.tiktok.com/@brheesclothingbou?lang=en" target="_blank" class="text-gray-200 hover:text-gray-400">
+                    <i class="fab fa-tiktok"></i>
                 </a>
             </div>
         </div>
         <div class="text-center mt-6 text-gray-200">
-            <p>&copy; 2024 R Essentials. All rights reserved.</p>
+            <p>&copy; 2024 Brhee's Clothing Boutique. All rights reserved.</p>
         </div>
     </div>
 </footer>
 
-<!-- Include Font Awesome -->
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+

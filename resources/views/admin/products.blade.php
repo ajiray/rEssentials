@@ -48,20 +48,18 @@
                 <form method="POST" action="{{ route('products.store') }}">
                     @csrf
                     <button id="closeModalButton" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-
+        
                     <h3 class="font-bold text-xl text-gray-700 text-center mb-5" id="modalHeder">Add New Item</h3>
-
+        
                     <!-- Input fields -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="name">Name:</label>
-                            <input type="text" id="name" name="name" class="input input-bordered"
-                                placeholder="Enter name" required>
+                            <input type="text" id="name" name="name" class="input input-bordered" placeholder="Enter name" required>
                         </div>
                         <div>
                             <label for="brand">Brand:</label>
-                            <input type="text" id="brand" name="brand" class="input input-bordered"
-                                placeholder="Enter brand" required>
+                            <input type="text" id="brand" name="brand" class="input input-bordered" placeholder="Enter brand" required>
                         </div>
                         <div>
                             <label for="description">Description:</label>
@@ -69,21 +67,22 @@
                         </div>
                         <div>
                             <label for="category">Category:</label>
-                            <input list="categoryList" id="category" name="category" class="input input-bordered"
-                                placeholder="Enter or select category" required>
+                            <input list="categoryList" id="category" name="category" class="input input-bordered" placeholder="Enter or select category" required>
                             <datalist id="categoryList">
                                 @foreach ($categories as $category)
                                     <option value="{{ $category }}">
                                 @endforeach
                             </datalist>
                         </div>
+                        <div class="flex items-center">
+                            <label for="is_upcoming" class="mr-2">Upcoming Item:</label>
+                            <input type="checkbox" id="is_upcoming" name="is_upcoming" value="1" class="toggle">
+                        </div>
                     </div>
-
+        
                     <!-- Add Item button -->
                     <div class="text-right mt-4">
-                        <button type="submit"
-                            class="btn btn-primary text-slate-900 border-none hover:bg-emerald-700 bg-green w-full">Add
-                            Item</button>
+                        <button type="submit" class="btn btn-primary text-slate-900 border-none hover:bg-emerald-700 bg-green w-full">Add Item</button>
                     </div>
                 </form>
             </div>
@@ -126,7 +125,7 @@
                             <div>
                                 <label for="description">Description:</label>
                                 <textarea id="description" value="{{ $item->description }}" name="description" class="textarea textarea-bordered"
-                                    placeholder="Enter description">{{ $item->product->description }}</textarea>
+                                    placeholder="Enter description">{{ $item->desc }}</textarea>
                             </div>
                             <div>
                                 <label for="price">Price:</label>
@@ -252,6 +251,9 @@
 
                         <x-input-label for="price" :value="__('Price')" />
                         <x-text-input id="price" name="price" placeholder="Enter price" required type="number" />
+
+                        <x-input-label for="description" :value="__('description')" />
+                        <x-text-input id="description" name="description" placeholder="Enter description" required />
 
                         <div>
                             <label for="new_images" class="block font-bold">Add Images:</label>
